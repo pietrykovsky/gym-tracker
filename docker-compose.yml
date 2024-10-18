@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    container_name: gym-tracker
+    build:
+      context: ./GymTracker
+      dockerfile: Dockerfile
+    ports:
+      - "5046:8080"
+    depends_on:
+      - db
+    networks:
+      - gym-tracker-network
+
+  db:
+    container_name: gym-tracker-db
+    restart: always
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    ports:
+      - "1433:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Asr43@#RfgvaWQ@
+    volumes:
+      - sqlserver:/var/opt/mssql
+    networks:
+      - gym-tracker-network
+
+volumes:
+  sqlserver:
+
+networks:
+  gym-tracker-network:
+    driver: bridge

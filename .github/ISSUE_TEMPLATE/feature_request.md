@@ -10,11 +10,6 @@ assignees: pietrykovsky
 ## Description
 [Clear and concise description of the feature]
 
-## User Story
-As a [type of user],
-I want [goal/objective],
-So that [benefit/value].
-
 ## Acceptance Criteria
 - [ ] Criterion 1
 - [ ] Criterion 2
@@ -35,6 +30,6 @@ So that [benefit/value].
 - [ ] Documentation updated
 
 ## References
-- [title|url]
-- [title|url]
-- [title|url]
+- [title](url)
+- [title](url)
+- [title](url)

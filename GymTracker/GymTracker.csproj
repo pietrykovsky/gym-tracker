@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-GymTracker-eca0310c-6f6f-4fc1-a959-cbb0f4b32e39</UserSecretsId>
+    <AnalysisMode>Minimum</AnalysisMode>
+    <AnalysisLevel>8.0</AnalysisLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>

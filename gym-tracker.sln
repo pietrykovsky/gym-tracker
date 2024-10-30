@@ -5,6 +5,8 @@ VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GymTracker", "GymTracker\GymTracker.csproj", "{0438D717-9A96-47C1-8068-51C045292C5F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GymTracker.Tests", "GymTracker.Tests\GymTracker.Tests.csproj", "{4CF6E289-874F-4555-B46E-25B270541D76}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{0438D717-9A96-47C1-8068-51C045292C5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0438D717-9A96-47C1-8068-51C045292C5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0438D717-9A96-47C1-8068-51C045292C5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4CF6E289-874F-4555-B46E-25B270541D76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4CF6E289-874F-4555-B46E-25B270541D76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4CF6E289-874F-4555-B46E-25B270541D76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4CF6E289-874F-4555-B46E-25B270541D76}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

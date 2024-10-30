@@ -1,17 +1,15 @@
 name: CI
 
-on:
-  push:
+on: push
 
 permissions:
   contents: read
-  checks: write          # Required for test report annotations
-  pull-requests: write   # Required for PR comments
+  checks: write
+  pull-requests: write
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     
@@ -36,7 +34,7 @@ jobs:
         dotnet build GymTracker/GymTracker.csproj --configuration Release --no-restore
         dotnet build GymTracker.Tests/GymTracker.Tests.csproj --configuration Release --no-restore
     
-   - name: Run tests
+    - name: Run tests
       run: |
         dotnet test GymTracker.Tests/GymTracker.Tests.csproj \
           --configuration Release \

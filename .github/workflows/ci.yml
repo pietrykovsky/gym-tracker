@@ -3,6 +3,11 @@ name: CI
 on:
   push:
 
+permissions:
+  contents: read
+  checks: write          # Required for test report annotations
+  pull-requests: write   # Required for PR comments
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -31,12 +36,17 @@ jobs:
         dotnet build GymTracker/GymTracker.csproj --configuration Release --no-restore
         dotnet build GymTracker.Tests/GymTracker.Tests.csproj --configuration Release --no-restore
     
-    - name: Run tests
-      run: dotnet test GymTracker.Tests/GymTracker.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+   - name: Run tests
+      run: |
+        dotnet test GymTracker.Tests/GymTracker.Tests.csproj \
+          --configuration Release \
+          --no-build \
+          --verbosity normal \
+          --logger "trx;LogFileName=test-results.trx"
     
     - name: Test Report
       uses: dorny/test-reporter@v1
-      if: success() || failure()
+      if: always()
       with:
         name: Test Results
         path: "**/TestResults/*.trx"

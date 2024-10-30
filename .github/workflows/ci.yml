@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Install dotnet format tool
+      run: dotnet tool install -g dotnet-format
+    
+    - name: Check code formatting
+      run: dotnet format --verify-no-changes
+    
+    - name: Restore dependencies
+      run: |
+        dotnet restore GymTracker/GymTracker.csproj
+        dotnet restore GymTracker.Tests/GymTracker.Tests.csproj
+    
+    - name: Build
+      run: |
+        dotnet build GymTracker/GymTracker.csproj --configuration Release --no-restore
+        dotnet build GymTracker.Tests/GymTracker.Tests.csproj --configuration Release --no-restore
+    
+    - name: Run tests
+      run: dotnet test GymTracker.Tests/GymTracker.Tests.csproj --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx"
+    
+    - name: Test Report
+      uses: dorny/test-reporter@v1
+      if: success() || failure()
+      with:
+        name: Test Results
+        path: "**/TestResults/*.trx"
+        reporter: dotnet-trx
+        fail-on-error: true
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-build
+        path: |
+          GymTracker/bin/Release/net8.0/
+          !GymTracker/bin/Release/net8.0/ref/

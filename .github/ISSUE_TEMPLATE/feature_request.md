@@ -2,7 +2,7 @@
 name: Feature request
 about: New feature implementation
 title: New feature implementation title
-labels: enhancement
+labels: Feature
 assignees: pietrykovsky
 
 ---

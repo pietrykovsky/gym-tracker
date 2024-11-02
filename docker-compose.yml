@@ -1,13 +1,15 @@
-version: '3.8'
-
 services:
   app:
     container_name: gym-tracker
     build:
       context: ./GymTracker
       dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
     ports:
       - "5046:8080"
+    env_file:
+      - .env
     depends_on:
       - db
     networks:
@@ -21,7 +23,8 @@ services:
       - "1433:1433"
     environment:
       - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=Asr43@#RfgvaWQ@
+    env_file:
+      - .env
     volumes:
       - sqlserver:/var/opt/mssql
     networks:

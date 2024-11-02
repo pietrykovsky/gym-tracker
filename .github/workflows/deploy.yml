@@ -21,6 +21,11 @@ jobs:
     
     - name: Restore dependencies
       run: dotnet restore GymTracker/GymTracker.csproj
+
+    - name: Create .env file
+      run: |
+        echo "DB_USER=${{ secrets.DB_USER }}" > .env
+        echo "MSSQL_SA_PASSWORD=${{ secrets.MSSQL_SA_PASSWORD }}" >> .env
     
     - name: Build project
       run: dotnet build GymTracker/GymTracker.csproj --configuration Release --no-restore

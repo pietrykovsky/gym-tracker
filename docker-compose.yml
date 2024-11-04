@@ -1,37 +1,49 @@
+version: '3.8'
+
 services:
   app:
     container_name: gym-tracker
     build:
       context: ./GymTracker
       dockerfile: Dockerfile
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
     ports:
       - "5046:8080"
     env_file:
       - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    volumes:
+      - ./dataprotectionkeys:/root/.aspnet/DataProtection-Keys
     networks:
       - gym-tracker-network
 
   db:
     container_name: gym-tracker-db
     restart: always
-    image: mcr.microsoft.com/mssql/server:2022-latest
+    image: postgres:17-alpine
     ports:
-      - "1433:1433"
-    environment:
-      - ACCEPT_EULA=Y
+      - "5200:5432"
     env_file:
       - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dev}
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     volumes:
-      - sqlserver:/var/opt/mssql
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - gym-tracker-network
 
 volumes:
-  sqlserver:
+  pgdata:
 
 networks:
   gym-tracker-network:

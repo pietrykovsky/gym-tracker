@@ -402,3 +402,6 @@ FodyWeavers.xsd
 # End of https://www.toptal.com/developers/gitignore/api/csharp
 
 .env
+
+# Key for running dotnet app in docker
+dataprotectionkeys/

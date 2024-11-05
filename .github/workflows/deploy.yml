@@ -64,7 +64,7 @@ jobs:
 
           # Restart application
           cd $DEPLOY_PATH
-          docker-compose down && docker-compose up -d
+          docker-compose down && docker-compose up -d --build
 
           # Start reverse proxy again
           cd $NGINX_PATH

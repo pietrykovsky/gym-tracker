@@ -1,4 +1,4 @@
-﻿@page "/Account/ExternalLogin"
+﻿@page "/account/external-login"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Security.Claims
@@ -71,13 +71,13 @@
     {
         if (RemoteError is not null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", $"Error from external provider: {RemoteError}", HttpContext);
+            RedirectManager.RedirectToWithStatus("account/login", $"Error from external provider: {RemoteError}", HttpContext);
         }
 
         var info = await SignInManager.GetExternalLoginInfoAsync();
         if (info is null)
         {
-            RedirectManager.RedirectToWithStatus("Account/Login", "Error loading external login information.", HttpContext);
+            RedirectManager.RedirectToWithStatus("account/login", "Error loading external login information.", HttpContext);
         }
 
         externalLoginInfo = info;
@@ -92,7 +92,7 @@
 
             // We should only reach this page via the login callback, so redirect back to
             // the login page if we get here some other way.
-            RedirectManager.RedirectTo("Account/Login");
+            RedirectManager.RedirectTo("account/login");
         }
     }
 
@@ -115,7 +115,7 @@
         }
         else if (result.IsLockedOut)
         {
-            RedirectManager.RedirectTo("Account/Lockout");
+            RedirectManager.RedirectTo("account/lockout");
         }
 
         // If the user does not have an account, then ask the user to create an account.

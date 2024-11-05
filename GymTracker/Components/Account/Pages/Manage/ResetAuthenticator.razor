@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/ResetAuthenticator"
+﻿@page "/account/manage/reset-authenticator"
 
 @using Microsoft.AspNetCore.Identity
 @using GymTracker.Data
@@ -45,7 +45,7 @@
         await SignInManager.RefreshSignInAsync(user);
 
         RedirectManager.RedirectToWithStatus(
-            "Account/Manage/EnableAuthenticator",
+            "account/manage/enable-authenticator",
             "Your authenticator app key has been reset, you will need to configure your authenticator app using the new key.",
             HttpContext);
     }

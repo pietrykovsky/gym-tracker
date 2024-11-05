@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/EnableAuthenticator"
+﻿@page "/account/manage/enable-authenticator"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Globalization
@@ -114,7 +114,7 @@ else
         }
         else
         {
-            RedirectManager.RedirectToWithStatus("Account/Manage/TwoFactorAuthentication", message, HttpContext);
+            RedirectManager.RedirectToWithStatus("account/manage/two-factor-authentication", message, HttpContext);
         }
     }
 

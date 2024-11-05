@@ -1,4 +1,4 @@
-﻿@page "/Account/ResendEmailConfirmation"
+﻿@page "/account/resend-email-confirmation"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Text
@@ -52,7 +52,7 @@
         var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
         code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
         var callbackUrl = NavigationManager.GetUriWithQueryParameters(
-            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            NavigationManager.ToAbsoluteUri("account/confirm-email").AbsoluteUri,
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
 

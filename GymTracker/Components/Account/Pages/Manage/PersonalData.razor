@@ -1,4 +1,4 @@
-﻿@page "/Account/Manage/PersonalData"
+﻿@page "/account/manage/personal-data"
 
 @inject IdentityUserAccessor UserAccessor
 
@@ -13,12 +13,12 @@
         <p>
             <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
         </p>
-        <form action="Account/Manage/DownloadPersonalData" method="post">
+        <form action="account/manage/download-personal-data" method="post">
             <AntiforgeryToken />
             <button class="btn btn-primary" type="submit">Download</button>
         </form>
         <p>
-            <a href="Account/Manage/DeletePersonalData" class="btn btn-danger">Delete</a>
+            <a href="account/manage/delete" class="btn btn-danger">Delete account</a>
         </p>
     </div>
 </div>

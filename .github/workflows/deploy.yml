@@ -7,6 +7,7 @@ on:
 
 env:
   DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+  NGINX_PATH: ${{ secrets.NGINX_PATH }}
 
 jobs:
   deploy:
@@ -56,6 +57,17 @@ jobs:
         SERVER_PORT: ${{ secrets.SERVER_PORT }}
       run: |
         ssh -p $SERVER_PORT $SERVER_USER@$SERVER_IP << EOF
+          # Stop reverse proxy
+          cd $NGINX_PATH
+          docker-compose down
+
+          # Restart application
           cd $DEPLOY_PATH
-          docker-compose down && docker-compose up -d --build
+          docker-compose down && docker-compose up -d
+
+          # Start reverse proxy again
+          cd $NGINX_PATH
+          docker-compose up -d
+
+          echo "Deployment completed!"
         EOF

@@ -9,12 +9,14 @@ public class ApplicationUser : IdentityUser
 {
     [Required]
     [PersonalData]
-    [StringLength(20)]
+    [StringLength(20, MinimumLength = 2, ErrorMessage = "First name must be between 2 and 20 characters")]
+    [RegularExpression(@"^[a-zA-Z\s\-']+$", ErrorMessage = "First name can only contain letters, spaces, hyphens and apostrophes")]
     public string FirstName { get; set; } = string.Empty;
 
     [Required]
     [PersonalData]
-    [StringLength(30)]
+    [StringLength(30, MinimumLength = 2, ErrorMessage = "Last name must be between 2 and 30 characters")]
+    [RegularExpression(@"^[a-zA-Z\s\-']+$", ErrorMessage = "Last name can only contain letters, spaces, hyphens and apostrophes")]
     public string LastName { get; set; } = string.Empty;
 
     [NotMapped]

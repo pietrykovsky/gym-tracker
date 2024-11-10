@@ -15,22 +15,20 @@
 <StatusMessage />
 
 <div class="row">
-    <div class="col-md-6">
-        <EditForm Model="UserInput" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
-            <DataAnnotationsValidator />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="UserInput.FirstName" class="form-control" />
-                <label for="first-name">First Name</label>
-                <ValidationMessage For="() => UserInput.FirstName" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="UserInput.LastName" class="form-control" />
-                <label for="last-name">Last Name</label>
-                <ValidationMessage For="() => UserInput.LastName" class="text-danger" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
-        </EditForm>
-    </div>
+    <EditForm Model="UserInput" FormName="profile" OnValidSubmit="OnValidSubmitAsync" method="post">
+        <DataAnnotationsValidator />
+        <div class="form-floating mb-3">
+            <InputText @bind-Value="UserInput.FirstName" class="form-control" />
+            <label for="first-name">First Name</label>
+            <ValidationMessage For="() => UserInput.FirstName" class="text-danger" />
+        </div>
+        <div class="form-floating mb-3">
+            <InputText @bind-Value="UserInput.LastName" class="form-control" />
+            <label for="last-name">Last Name</label>
+            <ValidationMessage For="() => UserInput.LastName" class="text-danger" />
+        </div>
+        <button type="submit" class="w-100 btn btn-lg btn-primary">Save</button>
+    </EditForm>
 </div>
 
 

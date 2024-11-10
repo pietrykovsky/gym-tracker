@@ -8,17 +8,17 @@
 <h3>Personal Data</h3>
 
 <div class="row">
-    <div class="col-md-6">
-        <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
-        <p>
-            <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
-        </p>
+    <p>Your account contains personal data that you have given us. This page allows you to download or delete that data.</p>
+    <p>
+        <strong>Deleting this data will permanently remove your account, and this cannot be recovered.</strong>
+    </p>
+    <div class="d-flex">
         <form action="account/manage/download-personal-data" method="post">
             <AntiforgeryToken />
-            <button class="btn btn-primary" type="submit">Download</button>
+            <button class="btn btn-primary m-2" type="submit">Download</button>
         </form>
         <p>
-            <a href="account/manage/delete" class="btn btn-danger">Delete account</a>
+            <a href="account/manage/delete" class="btn btn-danger m-2">Delete account</a>
         </p>
     </div>
 </div>

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using GymTracker.Components;
 using GymTracker.Components.Account;
 using GymTracker.Data;
+using GymTracker.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +57,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/account/logout";
     options.AccessDeniedPath = "/account/access-denied";
 });
+
+builder.Services.AddScoped<IBodyMeasurementService, BodyMeasurementService>();
 
 var app = builder.Build();
 

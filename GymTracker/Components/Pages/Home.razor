@@ -1,9 +1,18 @@
-﻿@page "/"
+﻿@rendermode InteractiveServer
+
+@page "/"
+
+@using GymTracker.Components.Dashboard
 
 <PageTitle>Home</PageTitle>
 
-<h1>You are authenticated</h1>
+<h3>Dashboard</h3>
+<div class="row justify-content-center">
+    <Calendar @bind-SelectedDate="selectedDate" />
+    <CreateSection SelectedDate="selectedDate"/>
+</div>
+<EventList SelectedDate="selectedDate" />
 
-<AuthorizeView>
-    Hello @context.User.Identity?.Name!
-</AuthorizeView>
+@code {
+    private DateOnly? selectedDate = DateOnly.FromDateTime(DateTime.Today);
+}

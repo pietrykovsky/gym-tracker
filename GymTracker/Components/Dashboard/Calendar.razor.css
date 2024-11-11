@@ -1,0 +1,39 @@
+.calendar-day {
+    aspect-ratio: 1;
+    padding: 0.25rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+}
+
+.calendar-day:hover {
+    background-color: #f8f9fa;
+}
+
+.calendar-day.today {
+    background-color: #defff6;
+    border: 2px solid #9fdbca;
+    font-weight: bold;
+}
+
+.calendar-day.selected {
+    background-color: #f2fffb;
+    border: 2px solid #b1f3e0;
+}
+
+.activity-dots {
+    display: flex;
+    gap: 2px;
+    margin-top: 2px;
+}
+
+.dot {
+    width: 4px;
+    height: 4px;
+    background-color: #1976d2;
+    border-radius: 50%;
+}

@@ -1,0 +1,183 @@
+﻿@rendermode InteractiveServer
+
+@namespace GymTracker.Components.Dashboard
+
+<div class="col-12 col-lg-8 col-xl-6">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <button class="btn btn-outline-light" @onclick="PreviousYear">
+                        &laquo;
+                    </button>
+                    <button class="btn btn-outline-light" @onclick="PreviousMonth">
+                        &lsaquo;
+                    </button>
+                </div>
+                <h4 class="mb-0">@displayedDate.ToString("MMMM yyyy")</h4>
+                <div>
+                    <button class="btn btn-outline-light" @onclick="NextMonth">
+                        &rsaquo;
+                    </button>
+                    <button class="btn btn-outline-light" @onclick="NextYear">
+                        &raquo;
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-3">
+            <div class="calendar">
+                <div class="row g-0 text-center fw-bold border-bottom mb-2">
+                    @foreach (var day in DaysOfWeek)
+                    {
+                        <div class="col">@day</div>
+                    }
+                </div>
+                @foreach (var week in GetCalendarDays())
+                {
+                    <div class="row g-0">
+                        @foreach (var day in week)
+                        {
+                            @if (day.Month == displayedDate.Month)
+                            {
+                                <div class="col position-relative">
+                                    <div class="calendar-day @GetDayClasses(day)" @onclick="() => SelectDate(day)">
+                                        <span>@day.Day</span>
+                                        @if (HasActivities(day))
+                                        {
+                                            <div class="activity-dots">
+                                                <span class="dot"></span>
+                                                <span class="dot"></span>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="col"></div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        @if (selectedDate != null)
+        {
+            <div class="card-footer">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">@selectedDate.Value.ToString("D")</h5>
+                    <button class="btn btn-large btn-primary" @onclick="Today">Go to today</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private DateOnly? selectedDate { get; set; }
+
+    [Parameter]
+    public DateOnly? SelectedDate { get; set; }
+
+    [Parameter]
+    public EventCallback<DateOnly?> SelectedDateChanged { get; set; }
+    
+    private DateTime currentDate;
+    private DateTime displayedDate;
+
+    private readonly string[] DaysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    protected override void OnInitialized()
+    {
+        currentDate = DateTime.Today;
+        displayedDate = currentDate;
+        selectedDate ??= DateOnly.FromDateTime(DateTime.Today);
+    }
+
+    private void NextMonth()
+    {
+        displayedDate = displayedDate.AddMonths(1);
+        StateHasChanged();
+    }
+
+    private void NextYear()
+    {
+        displayedDate = displayedDate.AddYears(1);
+        StateHasChanged();
+    }
+
+    private void PreviousMonth()
+    {
+        displayedDate = displayedDate.AddMonths(-1);
+        StateHasChanged();
+    }
+
+    private void PreviousYear()
+    {
+        displayedDate = displayedDate.AddYears(-1);
+        StateHasChanged();
+    }
+
+    private List<List<DateOnly>> GetCalendarDays()
+    {
+        var calendar = new List<List<DateOnly>>();
+        var firstDayOfMonth = new DateTime(displayedDate.Year, displayedDate.Month, 1);
+        var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+
+        // Adjust for Monday as first day of week
+        var daysToSubtract = firstDayOfMonth.DayOfWeek == DayOfWeek.Sunday ? 6 : firstDayOfMonth.DayOfWeek - DayOfWeek.Monday;
+        var startDate = firstDayOfMonth.AddDays(-daysToSubtract);
+
+        while (startDate <= lastDayOfMonth)
+        {
+            var week = new List<DateOnly>();
+            for (int i = 0; i < 7; i++)
+            {
+                week.Add(DateOnly.FromDateTime(startDate));
+                startDate = startDate.AddDays(1);
+            }
+            calendar.Add(week);
+        }
+
+        return calendar;
+    }
+
+    private string GetDayClasses(DateOnly date)
+    {
+        var classes = new List<string>();
+
+        if (date == DateOnly.FromDateTime(DateTime.Today))
+        {
+            classes.Add("today");
+        }
+        else if (date == selectedDate)
+        {
+            classes.Add("selected");
+        }
+
+
+        return string.Join(" ", classes);
+    }
+
+    private async void SelectDate(DateOnly date)
+    {
+        selectedDate = date;
+        await SelectedDateChanged.InvokeAsync(selectedDate);
+        StateHasChanged();
+    }
+
+    private async void Today()
+    {
+        displayedDate = currentDate;
+        selectedDate = DateOnly.FromDateTime(currentDate);
+        await SelectedDateChanged.InvokeAsync(selectedDate);
+        StateHasChanged();
+    }
+
+    private bool HasActivities(DateOnly date)
+    {
+        // Temporary mock data - replace with actual logic later
+        return date.Day is 12 or 15 or 20;
+    }
+}

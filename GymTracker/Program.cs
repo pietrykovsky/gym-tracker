@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using GymTracker.Components;
 using GymTracker.Components.Account;
 using GymTracker.Data;
+using GymTracker.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,7 +32,7 @@ if (string.IsNullOrEmpty(connectionString))
 {
     throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 }
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
+builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
@@ -56,6 +57,9 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LogoutPath = "/account/logout";
     options.AccessDeniedPath = "/account/access-denied";
 });
+
+builder.Services.AddBlazorBootstrap();
+builder.Services.AddScoped<IBodyMeasurementService, BodyMeasurementService>();
 
 var app = builder.Build();
 

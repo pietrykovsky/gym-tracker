@@ -1,0 +1,123 @@
+﻿@using GymTracker.Data
+@using BlazorBootstrap
+
+@namespace GymTracker.Components.Dashboard
+
+<div class="accordion-item">
+    <h2 class="accordion-header">
+        <button class="accordion-button btn-secondary @(IsExpanded ? "" : "collapsed")" 
+                type="button" 
+                data-bs-toggle="collapse" 
+                data-bs-target="#collapse-@Measurement.Id" 
+                aria-expanded="@IsExpanded"
+                @onclick="OnToggle">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <span class="me-auto">
+                    <Icon Name="IconName.Person" /> Body Measurement
+                </span>
+                <div class="d-flex gap-2 align-items-center">
+                    @if (Measurement.Weight.HasValue)
+                    {
+                        <Badge Color="BadgeColor.Primary">@Measurement.Weight kg</Badge>
+                    }
+                    @if (Measurement.BMI > 0)
+                    {
+                        <Badge Color="BadgeColor.Info">BMI: @Measurement.BMI.ToString("F1")</Badge>
+                    }
+                </div>
+            </div>
+        </button>
+    </h2>
+    <div id="collapse-@Measurement.Id" 
+         class="accordion-collapse collapse @(IsExpanded ? "show" : "")"
+         data-bs-parent="#measurementsAccordion">
+        <div class="accordion-body">
+            <dl class="row">
+                @foreach (var measurement in GetMeasurements())
+                {
+                    <dt class="col-sm-3">@measurement.Label</dt>
+                    <dd class="col-sm-9">@measurement.Value</dd>
+                }
+            </dl>
+
+            @if (!string.IsNullOrWhiteSpace(Measurement.Notes))
+            {
+                <div class="mt-3">
+                    <h6 class="text-muted">Notes</h6>
+                    <p>@Measurement.Notes</p>
+                </div>
+            }
+
+            <div class="mt-3 d-flex justify-content-end gap-2">
+                <Button Color="ButtonColor.Primary" @onclick="StartEdit">
+                    <Icon Name="IconName.Pencil" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" @onclick="OnDelete">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<BodyMeasurementModal @ref="editModal" 
+                     IsEdit="true" 
+                     ExistingMeasurement="Measurement"
+                     OnMeasurementSaved="HandleEdit" />
+
+@code {
+    [Parameter, EditorRequired]
+    public BodyMeasurement Measurement { get; set; } = default!;
+
+    [Parameter]
+    public bool IsExpanded { get; set; }
+
+    [Parameter]
+    public EventCallback<BodyMeasurement> OnEditRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<BodyMeasurement> OnDeleteRequested { get; set; }
+
+    [Parameter]
+    public EventCallback<int> OnToggleRequested { get; set; }
+
+    private BodyMeasurementModal? editModal;
+
+    private record MeasurementInfo(string Label, string Value);
+
+    private List<MeasurementInfo> GetMeasurements()
+    {
+        var measurements = new List<MeasurementInfo>();
+
+        if (Measurement.Height.HasValue)
+            measurements.Add(new("Height", $"{Measurement.Height:F1} cm"));
+        if (Measurement.Weight.HasValue)
+            measurements.Add(new("Weight", $"{Measurement.Weight:F1} kg"));
+        if (Measurement.FatMassPercentage.HasValue)
+            measurements.Add(new("Fat Mass", $"{Measurement.FatMassPercentage:F1}%"));
+        if (Measurement.MuscleMassPercentage.HasValue)
+            measurements.Add(new("Muscle Mass", $"{Measurement.MuscleMassPercentage:F1}%"));
+        if (Measurement.WaistCircumference.HasValue)
+            measurements.Add(new("Waist", $"{Measurement.WaistCircumference:F1} cm"));
+        if (Measurement.ChestCircumference.HasValue)
+            measurements.Add(new("Chest", $"{Measurement.ChestCircumference:F1} cm"));
+        if (Measurement.ArmCircumference.HasValue)
+            measurements.Add(new("Arm", $"{Measurement.ArmCircumference:F1} cm"));
+        if (Measurement.ThighCircumference.HasValue)
+            measurements.Add(new("Thigh", $"{Measurement.ThighCircumference:F1} cm"));
+
+        return measurements;
+    }
+
+    private async Task StartEdit()
+    {
+        if (editModal != null)
+        {
+            await editModal.Modal.ShowAsync();
+        }
+    }
+
+    private Task HandleEdit(BodyMeasurement measurement) => OnEditRequested.InvokeAsync(measurement);
+    private Task OnToggle() => OnToggleRequested.InvokeAsync(Measurement.Id);
+    private Task OnDelete() => OnDeleteRequested.InvokeAsync(Measurement);
+}

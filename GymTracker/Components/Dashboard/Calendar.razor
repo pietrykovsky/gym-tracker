@@ -1,5 +1,4 @@
 ﻿@rendermode InteractiveServer
-
 @namespace GymTracker.Components.Dashboard
 
 <div class="col-12 col-lg-8 col-xl-6">
@@ -45,11 +44,13 @@
                                          @onclick="() => SelectDate(day)"
                                          data-testid="calendar-day-@day.ToString("yyyy-MM-dd")">
                                         <span>@day.Day</span>
-                                        @if (HasActivities(day))
+                                        @if (GetMeasurementCount(day) > 0)
                                         {
                                             <div class="activity-dots">
-                                                <span class="dot"></span>
-                                                <span class="dot"></span>
+                                                @for (int i = 0; i < Math.Min(GetMeasurementCount(day), 5); i++)
+                                                {
+                                                    <span class="dot"></span>
+                                                }
                                             </div>
                                         }
                                     </div>
@@ -78,17 +79,24 @@
 
 @code {
     private DateOnly? selectedDate { get; set; }
+    private DateTime currentDate;
+    private DateTime displayedDate;
+    private readonly string[] DaysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
     [Parameter]
     public DateOnly? SelectedDate { get; set; }
 
     [Parameter]
     public EventCallback<DateOnly?> SelectedDateChanged { get; set; }
-    
-    private DateTime currentDate;
-    private DateTime displayedDate;
 
-    private readonly string[] DaysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    [Parameter]
+    public EventCallback<DateOnly?> OnSelectedDateChanged { get; set; }
+
+    [Parameter]
+    public Func<DateOnly, int>? HasActivities { get; set; }
+
+    [Parameter]
+    public Dictionary<DateOnly, int>? DatesWithMeasurements { get; set; }
 
     protected override void OnInitialized()
     {
@@ -153,33 +161,33 @@
         {
             classes.Add("today");
         }
-        else if (date == selectedDate)
+        if (date == selectedDate)
         {
             classes.Add("selected");
         }
 
-
         return string.Join(" ", classes);
     }
 
-    private async void SelectDate(DateOnly date)
+    private async Task SelectDate(DateOnly date)
     {
         selectedDate = date;
         await SelectedDateChanged.InvokeAsync(selectedDate);
+        await OnSelectedDateChanged.InvokeAsync(selectedDate);
         StateHasChanged();
     }
 
-    private async void Today()
+    private async Task Today()
     {
         displayedDate = currentDate;
         selectedDate = DateOnly.FromDateTime(currentDate);
         await SelectedDateChanged.InvokeAsync(selectedDate);
+        await OnSelectedDateChanged.InvokeAsync(selectedDate);
         StateHasChanged();
     }
 
-    private bool HasActivities(DateOnly date)
+    private int GetMeasurementCount(DateOnly date)
     {
-        // Temporary mock data - replace with actual logic later
-        return date.Day is 12 or 15 or 20;
+        return DatesWithMeasurements?.GetValueOrDefault(date) ?? 0;
     }
 }

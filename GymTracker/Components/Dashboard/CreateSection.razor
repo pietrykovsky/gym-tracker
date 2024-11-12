@@ -1,16 +1,31 @@
-﻿@namespace GymTracker.Components.Dashboard
+﻿@using BlazorBootstrap
+
+@namespace GymTracker.Components.Dashboard
 
 <div class="col-lg-4 my-3">
     <div class="d-flex flex-row flex-lg-column align-items-center align-items-lg-start justify-content-between gap-3">
         <h4 class="m-0">Add new events</h4>
         <div class="d-flex flex-row flex-lg-column gap-2 flex-grow-lg-1 w-100">
-            <button class="btn btn-primary w-100">Training session</button>
-            <button class="btn btn-primary w-100">Body measurement</button>
+            <Button Color="ButtonColor.Primary" Class="w-100">
+                <Icon Name="IconName.Stopwatch" /> Training session
+            </Button>
+            <Button Color="ButtonColor.Secondary" Class="w-100" @onclick="@(() => measurementModal!.Modal.ShowAsync())">
+                <Icon Name="IconName.Person" /> Body measurement
+            </Button>
         </div>
     </div>
 </div>
 
+<BodyMeasurementModal @ref="measurementModal" 
+                     SelectedDate="SelectedDate" 
+                     OnMeasurementSaved="@(async _ => await OnMeasurementAdded.InvokeAsync())" />
+
 @code {
+    private BodyMeasurementModal? measurementModal;
+    
     [Parameter]
     public DateOnly? SelectedDate { get; set; }
+
+    [Parameter]
+    public EventCallback OnMeasurementAdded { get; set; }
 }

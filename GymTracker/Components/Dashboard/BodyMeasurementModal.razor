@@ -1,0 +1,173 @@
+﻿@using System.Security.Claims
+@using GymTracker.Data
+@using GymTracker.Services
+@using BlazorBootstrap
+
+@namespace GymTracker.Components.Dashboard
+
+@inject IBodyMeasurementService MeasurementService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<Modal @ref="this.Modal" Title="@(IsEdit ? "Edit Measurement" : "Add New Measurement")">
+    <BodyTemplate>
+        <EditForm id="measurementForm" Model="@measurement" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger mb-3" />
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputDate @bind-Value="measurement.Date" class="form-control" />
+                        <label>Date</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputNumber @bind-Value="measurement.Weight" class="form-control" step="0.1" />
+                        <label>Weight (kg)</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputNumber @bind-Value="measurement.Height" class="form-control" step="1" />
+                        <label>Height (cm)</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputNumber @bind-Value="measurement.FatMassPercentage" class="form-control" step="0.1" />
+                        <label>Fat Mass (%)</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputNumber @bind-Value="measurement.MuscleMassPercentage" class="form-control" step="0.1" />
+                        <label>Muscle Mass (%)</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputNumber @bind-Value="measurement.WaistCircumference" class="form-control" step="0.1" />
+                        <label>Waist (cm)</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputNumber @bind-Value="measurement.ChestCircumference" class="form-control" step="0.1" />
+                        <label>Chest (cm)</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputNumber @bind-Value="measurement.ArmCircumference" class="form-control" step="0.1" />
+                        <label>Arm (cm)</label>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        <InputNumber @bind-Value="measurement.ThighCircumference" class="form-control" step="0.1" />
+                        <label>Thigh (cm)</label>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-floating">
+                        <InputTextArea @bind-Value="measurement.Notes" class="form-control" style="height: 100px" />
+                        <label>Notes</label>
+                    </div>
+                </div>
+
+                @if (measurement.Height.HasValue && measurement.Weight.HasValue && measurement.BMI > 0)
+                {
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            Calculated BMI: @measurement.BMI.ToString("F1")
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <Button Color="ButtonColor.Secondary" @onclick="@(() => Modal.HideAsync())">Cancel</Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" form="measurementForm">@(IsEdit ? "Save Changes" : "Add Measurement")</Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+    public Modal Modal { get; set; } = default!;
+    private BodyMeasurement measurement = new();
+
+    [Parameter]
+    public DateOnly? SelectedDate { get; set; }
+
+    [Parameter]
+    public Func<BodyMeasurement, Task> OnMeasurementSaved { get; set; } = default!;
+
+    [Parameter]
+    public bool IsEdit { get; set; }
+
+    [Parameter]
+    public BodyMeasurement? ExistingMeasurement { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (IsEdit && ExistingMeasurement != null)
+        {
+            measurement = new()
+            {
+                Id = ExistingMeasurement.Id,
+                UserId = ExistingMeasurement.UserId,
+                Date = ExistingMeasurement.Date,
+                Weight = ExistingMeasurement.Weight,
+                Height = ExistingMeasurement.Height,
+                FatMassPercentage = ExistingMeasurement.FatMassPercentage,
+                MuscleMassPercentage = ExistingMeasurement.MuscleMassPercentage,
+                WaistCircumference = ExistingMeasurement.WaistCircumference,
+                ChestCircumference = ExistingMeasurement.ChestCircumference,
+                ArmCircumference = ExistingMeasurement.ArmCircumference,
+                ThighCircumference = ExistingMeasurement.ThighCircumference,
+                Notes = ExistingMeasurement.Notes
+            };
+        }
+        else if (SelectedDate.HasValue)
+        {
+            measurement = new()
+            {
+                Date = SelectedDate.Value
+            };
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        if (string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        if (IsEdit)
+        {
+            await MeasurementService.UpdateMeasurementAsync(userId, measurement.Id, measurement);
+        }
+        else
+        {
+            await MeasurementService.CreateMeasurementAsync(userId, measurement);
+        }
+
+        await OnMeasurementSaved.Invoke(measurement);
+        await Modal.HideAsync();
+        NavigationManager.NavigateTo("/", true);
+    }
+}

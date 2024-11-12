@@ -5,16 +5,15 @@
         <h4 class="m-0">Add new events</h4>
         <div class="d-flex flex-row flex-lg-column gap-2 flex-grow-lg-1 w-100">
             <button class="btn btn-primary w-100">Training session</button>
-            <button class="btn btn-secondary w-100" data-bs-toggle="modal" data-bs-target="#@bodyMeasurementModalId">Body measurement</button>
+            <button class="btn btn-secondary w-100" @onclick="@(async () => await measurementModal!.Modal.ShowAsync())">Body measurement</button>
         </div>
     </div>
 </div>
 
-<CreateBodyMeasurementModal ModalId="@bodyMeasurementModalId" SelectedDate="SelectedDate" OnMeasurementAdded="OnMeasurementAdded" />
+<CreateBodyMeasurementModal @ref="measurementModal" SelectedDate="SelectedDate" OnMeasurementAdded="OnMeasurementAdded" />
 
 @code {
-    private string bodyMeasurementModalId = "bodyMeasurementModal";
-
+    private CreateBodyMeasurementModal? measurementModal;
     [Parameter]
     public DateOnly? SelectedDate { get; set; }
 

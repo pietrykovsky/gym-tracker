@@ -58,6 +58,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/account/access-denied";
 });
 
+builder.Services.AddBlazorBootstrap();
 builder.Services.AddScoped<IBodyMeasurementService, BodyMeasurementService>();
 
 var app = builder.Build();

@@ -19,7 +19,7 @@ public class RequireAtLeastOneMeasurementAttribute : ValidationAttribute
                        p.Name != nameof(BodyMeasurement.BMI)); // Exclude BMI as it's calculated
 
         // Check if at least one property has a value
-        bool hasValue = measurementProperties.Any(prop => 
+        bool hasValue = measurementProperties.Any(prop =>
             prop.GetValue(measurement) is float value && value > 0);
 
         if (!hasValue)

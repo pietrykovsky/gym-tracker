@@ -29,11 +29,14 @@
     display: flex;
     gap: 2px;
     margin-top: 2px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 24px; /* Allows for up to 5 dots */
 }
 
 .dot {
     width: 4px;
     height: 4px;
-    background-color: #1976d2;
+    background-color: #f3969a;
     border-radius: 50%;
 }

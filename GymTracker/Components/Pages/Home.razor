@@ -2,24 +2,76 @@
 @rendermode InteractiveServer
 
 @using GymTracker.Components.Dashboard
+@using GymTracker.Services
+@using System.Security.Claims
+
+@inject IBodyMeasurementService MeasurementService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Home</PageTitle>
 
 <h3>Dashboard</h3>
 <div class="row justify-content-center">
-    <Calendar @bind-SelectedDate="selectedDate" />
+    <Calendar 
+        @bind-SelectedDate="selectedDate" 
+        OnSelectedDateChanged="HandleDateChanged"
+        DatesWithMeasurements="datesWithMeasurementCounts" />
     <CreateSection 
         SelectedDate="selectedDate"
         OnMeasurementAdded="HandleMeasurementAdded" />
 </div>
-<EventList SelectedDate="selectedDate" />
+<EventList 
+    SelectedDate="selectedDate" 
+    OnMeasurementsChanged="HandleMeasurementAdded" />
 
 @code {
     private DateOnly? selectedDate = DateOnly.FromDateTime(DateTime.Today);
+    private Dictionary<DateOnly, int> datesWithMeasurementCounts = new();
+    private string? userId;
 
-    private void HandleMeasurementAdded()
+    protected override async Task OnInitializedAsync()
     {
-        // Refresh your event list or other components as needed
-        StateHasChanged();
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await LoadMonthMeasurements();
+        }
+    }
+
+    private async Task LoadMonthMeasurements()
+    {
+        if (selectedDate.HasValue && !string.IsNullOrEmpty(userId))
+        {
+            var startDate = new DateOnly(selectedDate.Value.Year, selectedDate.Value.Month, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+            
+            var monthMeasurements = await MeasurementService.GetMeasurementsInRangeAsync(
+                userId,
+                startDate,
+                endDate
+            );
+
+            datesWithMeasurementCounts = monthMeasurements
+                .GroupBy(m => m.Date)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleDateChanged(DateOnly? newDate)
+    {
+        selectedDate = newDate;
+        if (selectedDate?.Month != newDate?.Month)
+        {
+            await LoadMonthMeasurements();
+        }
+    }
+
+    private async Task HandleMeasurementAdded()
+    {
+        await LoadMonthMeasurements();
     }
 }

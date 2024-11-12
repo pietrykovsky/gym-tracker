@@ -5,57 +5,56 @@ namespace GymTracker.Services;
 
 public class BodyMeasurementService : IBodyMeasurementService
 {
-    private readonly ApplicationDbContext _context;
+    private readonly IDbContextFactory<ApplicationDbContext> _contextFactory;
 
-    public BodyMeasurementService(ApplicationDbContext context)
+    public BodyMeasurementService(IDbContextFactory<ApplicationDbContext> contextFactory)
     {
-        _context = context;
+        _contextFactory = contextFactory;
     }
 
     public async Task<IEnumerable<BodyMeasurement>> GetUserMeasurementsAsync(string userId)
     {
-        return await _context.BodyMeasurements
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.BodyMeasurements
             .Where(m => m.UserId == userId)
+            .OrderByDescending(m => m.Date)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<BodyMeasurement>> GetMeasurementsInRangeAsync(string userId, DateOnly startDate, DateOnly endDate)
+    {
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.BodyMeasurements
+            .Where(m => m.UserId == userId && m.Date >= startDate && m.Date <= endDate)
             .OrderByDescending(m => m.Date)
             .ToListAsync();
     }
 
     public async Task<BodyMeasurement?> GetMeasurementAsync(string userId, int measurementId)
     {
-        return await _context.BodyMeasurements
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.BodyMeasurements
             .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
-    }
-
-    public async Task<BodyMeasurement?> GetLatestMeasurementAsync(string userId)
-    {
-        return await _context.BodyMeasurements
-            .Where(m => m.UserId == userId)
-            .OrderByDescending(m => m.Date)
-            .FirstOrDefaultAsync();
     }
 
     public async Task<BodyMeasurement> CreateMeasurementAsync(string userId, BodyMeasurement measurement)
     {
-        // Ensure the measurement is assigned to the correct user
+        await using var context = await _contextFactory.CreateDbContextAsync();
         measurement.UserId = userId;
-
-        await _context.BodyMeasurements.AddAsync(measurement);
-        await _context.SaveChangesAsync();
-
+        await context.BodyMeasurements.AddAsync(measurement);
+        await context.SaveChangesAsync();
         return measurement;
     }
 
     public async Task<BodyMeasurement?> UpdateMeasurementAsync(string userId, int measurementId, BodyMeasurement updatedMeasurement)
     {
-        var existingMeasurement = await _context.BodyMeasurements
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var existingMeasurement = await context.BodyMeasurements
             .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
 
         if (existingMeasurement == null)
-        {
             return null;
-        }
 
-        // Update only the allowed properties
         existingMeasurement.Date = updatedMeasurement.Date;
         existingMeasurement.Weight = updatedMeasurement.Weight;
         existingMeasurement.Height = updatedMeasurement.Height;
@@ -67,30 +66,21 @@ public class BodyMeasurementService : IBodyMeasurementService
         existingMeasurement.ThighCircumference = updatedMeasurement.ThighCircumference;
         existingMeasurement.Notes = updatedMeasurement.Notes;
 
-        await _context.SaveChangesAsync();
+        await context.SaveChangesAsync();
         return existingMeasurement;
     }
 
     public async Task<bool> DeleteMeasurementAsync(string userId, int measurementId)
     {
-        var measurement = await _context.BodyMeasurements
+        await using var context = await _contextFactory.CreateDbContextAsync();
+        var measurement = await context.BodyMeasurements
             .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
 
         if (measurement == null)
-        {
             return false;
-        }
 
-        _context.BodyMeasurements.Remove(measurement);
-        await _context.SaveChangesAsync();
+        context.BodyMeasurements.Remove(measurement);
+        await context.SaveChangesAsync();
         return true;
-    }
-
-    public async Task<IEnumerable<BodyMeasurement>> GetMeasurementsInRangeAsync(string userId, DateOnly startDate, DateOnly endDate)
-    {
-        return await _context.BodyMeasurements
-            .Where(m => m.UserId == userId && m.Date >= startDate && m.Date <= endDate)
-            .OrderByDescending(m => m.Date)
-            .ToListAsync();
     }
 }

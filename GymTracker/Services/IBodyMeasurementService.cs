@@ -15,9 +15,9 @@ public interface IBodyMeasurementService
     Task<BodyMeasurement?> GetMeasurementAsync(string userId, int measurementId);
 
     /// <summary>
-    /// Gets the latest measurement for a user
+    /// Gets all measurements for a user within a specific date range
     /// </summary>
-    Task<BodyMeasurement?> GetLatestMeasurementAsync(string userId);
+    Task<IEnumerable<BodyMeasurement>> GetMeasurementsInRangeAsync(string userId, DateOnly startDate, DateOnly endDate);
 
     /// <summary>
     /// Creates a new measurement for a user

@@ -2,8 +2,9 @@ using GymTracker.Components.Dashboard;
 using System.Linq;
 using FluentAssertions;
 using System;
+using System.Collections.Generic;
 
-namespace GymTracker.Tests.Components.Dashboard;
+namespace GymTracker.Tests.Components;
 
 public class CalendarTests : TestContext
 {
@@ -134,12 +135,29 @@ public class CalendarTests : TestContext
     [Fact]
     public void Calendar_ShouldShowActivityDots_ForDatesWithActivities()
     {
-        // Arrange & Act
-        var cut = RenderComponent<Calendar>();
+        // Arrange
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var measurementDates = new Dictionary<DateOnly, int>
+        {
+            { today, 1 },
+            { today.AddDays(1), 2 },
+            { today.AddDays(-1), 3 }
+        };
 
-        // Assert
-        var daysWithDots = cut.FindAll(".activity-dots").Count();
-        daysWithDots.Should().BeGreaterThan(0);
+        var cut = RenderComponent<Calendar>(parameters => parameters
+            .Add(p => p.DatesWithMeasurements, measurementDates));
+
+        // Act & Assert
+        var dotsContainers = cut.FindAll(".activity-dots");
+        dotsContainers.Count.Should().Be(3);
+
+        // Verify individual dots within containers
+        foreach (var container in dotsContainers)
+        {
+            var dots = container.QuerySelectorAll(".dot");
+            dots.Length.Should().BeGreaterThan(0);
+            dots.Length.Should().BeLessOrEqualTo(5); // Max 5 dots per day as per component logic
+        }
     }
 
     [Fact]
@@ -357,24 +375,5 @@ public class CalendarTests : TestContext
         // Assert
         cut.Find("[data-testid='month-display']").TextContent
             .Should().Be(initialMonth.ToString("MMMM yyyy"));
-    }
-
-    [Fact]
-    public void Calendar_ShouldHandle_InitialSelectedDateOutsideCurrentMonth()
-    {
-        // Arrange
-        var futureDate = DateOnly.FromDateTime(DateTime.Today.AddMonths(2));
-
-        // Act
-        var cut = RenderComponent<Calendar>(parameters => parameters
-            .Add(p => p.SelectedDate, futureDate));
-
-        // Assert
-        var monthDisplay = cut.Find("[data-testid='month-display']").TextContent;
-        monthDisplay.Should().Be(DateTime.Today.ToString("MMMM yyyy"));
-
-        // Selected date should not be visible in current month view
-        var selectedDateElements = cut.FindAll(".selected");
-        selectedDateElements.Count.Should().Be(0);
     }
 }

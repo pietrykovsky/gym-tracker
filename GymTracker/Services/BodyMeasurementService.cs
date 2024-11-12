@@ -14,7 +14,7 @@ public class BodyMeasurementService : IBodyMeasurementService
 
     public async Task<IEnumerable<BodyMeasurement>> GetUserMeasurementsAsync(string userId)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.BodyMeasurements
             .Where(m => m.UserId == userId)
             .OrderByDescending(m => m.Date)
@@ -23,7 +23,7 @@ public class BodyMeasurementService : IBodyMeasurementService
 
     public async Task<IEnumerable<BodyMeasurement>> GetMeasurementsInRangeAsync(string userId, DateOnly startDate, DateOnly endDate)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.BodyMeasurements
             .Where(m => m.UserId == userId && m.Date >= startDate && m.Date <= endDate)
             .OrderByDescending(m => m.Date)
@@ -32,14 +32,14 @@ public class BodyMeasurementService : IBodyMeasurementService
 
     public async Task<BodyMeasurement?> GetMeasurementAsync(string userId, int measurementId)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         return await context.BodyMeasurements
             .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
     }
 
     public async Task<BodyMeasurement> CreateMeasurementAsync(string userId, BodyMeasurement measurement)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         measurement.UserId = userId;
         await context.BodyMeasurements.AddAsync(measurement);
         await context.SaveChangesAsync();
@@ -48,7 +48,7 @@ public class BodyMeasurementService : IBodyMeasurementService
 
     public async Task<BodyMeasurement?> UpdateMeasurementAsync(string userId, int measurementId, BodyMeasurement updatedMeasurement)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         var existingMeasurement = await context.BodyMeasurements
             .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
 
@@ -72,7 +72,7 @@ public class BodyMeasurementService : IBodyMeasurementService
 
     public async Task<bool> DeleteMeasurementAsync(string userId, int measurementId)
     {
-        await using var context = await _contextFactory.CreateDbContextAsync();
+        using var context = await _contextFactory.CreateDbContextAsync();
         var measurement = await context.BodyMeasurements
             .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
 

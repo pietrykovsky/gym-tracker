@@ -7,19 +7,19 @@
         <div class="card-header bg-primary text-white py-3">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <button class="btn btn-outline-light" @onclick="PreviousYear">
+                    <button class="btn btn-outline-light" @onclick="PreviousYear" data-testid="prev-year-btn">
                         &laquo;
                     </button>
-                    <button class="btn btn-outline-light" @onclick="PreviousMonth">
+                    <button class="btn btn-outline-light" @onclick="PreviousMonth" data-testid="prev-month-btn">
                         &lsaquo;
                     </button>
                 </div>
-                <h4 class="mb-0">@displayedDate.ToString("MMMM yyyy")</h4>
+                <h4 class="mb-0" data-testid="month-display">@displayedDate.ToString("MMMM yyyy")</h4>
                 <div>
-                    <button class="btn btn-outline-light" @onclick="NextMonth">
+                    <button class="btn btn-outline-light" @onclick="NextMonth" data-testid="next-month-btn">
                         &rsaquo;
                     </button>
-                    <button class="btn btn-outline-light" @onclick="NextYear">
+                    <button class="btn btn-outline-light" @onclick="NextYear" data-testid="next-year-btn">
                         &raquo;
                     </button>
                 </div>
@@ -41,7 +41,9 @@
                             @if (day.Month == displayedDate.Month)
                             {
                                 <div class="col position-relative">
-                                    <div class="calendar-day @GetDayClasses(day)" @onclick="() => SelectDate(day)">
+                                    <div class="calendar-day @GetDayClasses(day)" 
+                                         @onclick="() => SelectDate(day)"
+                                         data-testid="calendar-day-@day.ToString("yyyy-MM-dd")">
                                         <span>@day.Day</span>
                                         @if (HasActivities(day))
                                         {
@@ -66,8 +68,8 @@
         {
             <div class="card-footer">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">@selectedDate.Value.ToString("D")</h5>
-                    <button class="btn btn-large btn-primary" @onclick="Today">Go to today</button>
+                    <h5 class="mb-0" data-testid="selected-date">@selectedDate.Value.ToString("D")</h5>
+                    <button class="btn btn-large btn-primary" @onclick="Today" data-testid="today-btn">Go to today</button>
                 </div>
             </div>
         }

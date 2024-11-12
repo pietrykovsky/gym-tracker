@@ -1,0 +1,24 @@
+﻿@namespace GymTracker.Components.Dashboard
+
+<div class="row my-3">
+    <h5>Events</h5>
+    <div class="accordion" id="eventAccordion" bis_skin_checked="1">
+        <div class="accordion-item" bis_skin_checked="1">
+            <h2 class="accordion-header" id="headingOne">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                    Mocked Item #1
+                </button>
+            </h2>
+            <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#eventAccordion" bis_skin_checked="1" style="">
+                <div class="accordion-body" bis_skin_checked="1">
+                    <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow. Actual items are mocked and will be replaced with real data.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public DateOnly? SelectedDate { get; set; }
+}

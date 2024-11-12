@@ -1,0 +1,16 @@
+﻿@namespace GymTracker.Components.Dashboard
+
+<div class="col-lg-4 my-3">
+    <div class="d-flex flex-row flex-lg-column align-items-center align-items-lg-start justify-content-between gap-3">
+        <h4 class="m-0">Add new events</h4>
+        <div class="d-flex flex-row flex-lg-column gap-2 flex-grow-lg-1 w-100">
+            <button class="btn btn-primary w-100">Training session</button>
+            <button class="btn btn-primary w-100">Body measurement</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public DateOnly? SelectedDate { get; set; }
+}

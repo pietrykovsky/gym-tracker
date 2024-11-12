@@ -2,37 +2,39 @@
 
 @inject NavigationManager NavigationManager
 
-<nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
-    <div class="container-fluid">
+<nav class="navbar navbar-expand-lg bg-primary fixed-top" data-bs-theme="dark">
+    <div class="container">
         <a class="navbar-brand col-lg-3 justify-content-lg-center" href="/">GymTracker</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
+        <button class="navbar-toggler collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01" aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+            <span></span>
+            <span></span>
+            <span></span>
         </button>
         <div class="collapse navbar-collapse justify-content-lg-end text-center" id="navbarColor01">
             <ul class="navbar-nav">
                 <AuthorizeView>
                     <NotAuthorized>
-                        <li class="nav-item">
+                        <div class="nav-item">
                             <NavLink class="nav-link" href="account/login">Login</NavLink>
-                        </li>
-                        <li class="nav-item">
+                        </div>
+                        <div class="nav-item">
                             <NavLink class="nav-link" href="account/register">Register</NavLink>
-                        </li>
+                        </div>
                     </NotAuthorized>
                     <Authorized>
-                        <li class="nav-item">
+                        <div class="nav-item">
                             <NavLink class="nav-link" href="/" Match="NavLinkMatch.All">Home</NavLink>
-                        </li>
-                        <li class="nav-item">
+                        </div>
+                        <div class="nav-item">
                             <NavLink class="nav-link" href="account/manage">@context.User.Identity?.Name</NavLink>
-                        </li>
-                        <li class="nav-item">
+                        </div>
+                        <div class="nav-item">
                             <form action="account/logout" method="post">
                                 <AntiforgeryToken />
                                 <input type="hidden" name="ReturnUrl" value="@currentUrl" />
                                 <button type="submit" class="nav-link">Logout</button>
                             </form>
-                        </li>
+                        </div>
                     </Authorized>
                 </AuthorizeView>
             </ul>

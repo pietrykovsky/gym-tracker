@@ -1,25 +1,28 @@
 ﻿@using GymTracker.Data
+@using BlazorBootstrap
 
 @namespace GymTracker.Components.Dashboard
 
 <div class="accordion-item">
     <h2 class="accordion-header">
-        <button class="accordion-button @(IsExpanded ? "" : "collapsed")" 
+        <button class="accordion-button btn-secondary @(IsExpanded ? "" : "collapsed")" 
                 type="button" 
                 data-bs-toggle="collapse" 
                 data-bs-target="#collapse-@Measurement.Id" 
                 aria-expanded="@IsExpanded"
                 @onclick="OnToggle">
             <div class="d-flex justify-content-between align-items-center w-100">
-                <span class="me-auto"><i class="bi bi-person-arms-up"></i> Body Measurement</span>
+                <span class="me-auto">
+                    <Icon Name="IconName.Person" /> Body Measurement
+                </span>
                 <div class="d-flex gap-2 align-items-center">
                     @if (Measurement.Weight.HasValue)
                     {
-                        <span class="badge bg-primary">@Measurement.Weight kg</span>
+                        <Badge Color="BadgeColor.Primary">@Measurement.Weight kg</Badge>
                     }
                     @if (Measurement.BMI > 0)
                     {
-                        <span class="badge bg-info">BMI: @Measurement.BMI.ToString("F1")</span>
+                        <Badge Color="BadgeColor.Info">BMI: @Measurement.BMI.ToString("F1")</Badge>
                     }
                 </div>
             </div>
@@ -29,137 +32,38 @@
          class="accordion-collapse collapse @(IsExpanded ? "show" : "")"
          data-bs-parent="#measurementsAccordion">
         <div class="accordion-body">
-            @if (isEditing)
+            <dl class="row">
+                @foreach (var measurement in GetMeasurements())
+                {
+                    <dt class="col-sm-3">@measurement.Label</dt>
+                    <dd class="col-sm-9">@measurement.Value</dd>
+                }
+            </dl>
+
+            @if (!string.IsNullOrWhiteSpace(Measurement.Notes))
             {
-                <EditForm Model="editingMeasurement" OnValidSubmit="HandleSubmit">
-                    <DataAnnotationsValidator />
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputDate @bind-Value="editingMeasurement!.Date" class="form-control" />
-                                <label>Date</label>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputNumber @bind-Value="editingMeasurement.Weight" class="form-control" step="0.1" />
-                                <label>Weight (kg)</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputNumber @bind-Value="editingMeasurement.Height" class="form-control" step="1" />
-                                <label>Height (cm)</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputNumber @bind-Value="editingMeasurement.FatMassPercentage" class="form-control" step="0.1" />
-                                <label>Fat Mass (%)</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputNumber @bind-Value="editingMeasurement.MuscleMassPercentage" class="form-control" step="0.1" />
-                                <label>Muscle Mass (%)</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputNumber @bind-Value="editingMeasurement.WaistCircumference" class="form-control" step="0.1" />
-                                <label>Waist (cm)</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputNumber @bind-Value="editingMeasurement.ChestCircumference" class="form-control" step="0.1" />
-                                <label>Chest (cm)</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputNumber @bind-Value="editingMeasurement.ArmCircumference" class="form-control" step="0.1" />
-                                <label>Arm (cm)</label>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="form-floating">
-                                <InputNumber @bind-Value="editingMeasurement.ThighCircumference" class="form-control" step="0.1" />
-                                <label>Thigh (cm)</label>
-                            </div>
-                        </div>
-
-                        <div class="col-12">
-                            <div class="form-floating">
-                                <InputTextArea @bind-Value="editingMeasurement.Notes" class="form-control" style="height: 100px" />
-                                <label>Notes</label>
-                            </div>
-                        </div>
-
-                        @if (editingMeasurement.Height.HasValue && editingMeasurement.Weight.HasValue && editingMeasurement.BMI > 0)
-                        {
-                            <div class="col-12">
-                                <div class="alert alert-info">
-                                    Calculated BMI: @editingMeasurement.BMI.ToString("F1")
-                                </div>
-                            </div>
-                        }
-                    </div>
-
-                    <div class="mt-3 d-flex justify-content-end gap-2">
-                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </EditForm>
-            }
-            else
-            {
-                <div class="row g-3">
-                    @foreach (var measurementCard in GetMeasurementCards())
-                    {
-                        <div class="col-md-6 col-lg-4">
-                            <div class="card measurement-card h-100">
-                                <div class="card-body">
-                                    <h6 class="card-subtitle mb-2 text-muted">@measurementCard.Label</h6>
-                                    <p class="card-text">@measurementCard.Value</p>
-                                </div>
-                            </div>
-                        </div>
-                    }
-
-                    @if (!string.IsNullOrWhiteSpace(Measurement.Notes))
-                    {
-                        <div class="col-12">
-                            <div class="card notes-card">
-                                <div class="card-body">
-                                    <h6 class="card-subtitle mb-2 text-muted">Notes</h6>
-                                    <p class="card-text">@Measurement.Notes</p>
-                                </div>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <div class="mt-3 d-flex justify-content-end gap-2">
-                    <button class="btn btn-primary" @onclick="StartEdit">
-                        <i class="bi bi-pencil"></i> Edit
-                    </button>
-                    <button class="btn btn-danger" @onclick="OnDelete">
-                        <i class="bi bi-trash"></i> Delete
-                    </button>
+                <div class="mt-3">
+                    <h6 class="text-muted">Notes</h6>
+                    <p>@Measurement.Notes</p>
                 </div>
             }
+
+            <div class="mt-3 d-flex justify-content-end gap-2">
+                <Button Color="ButtonColor.Primary" @onclick="StartEdit">
+                    <Icon Name="IconName.Pencil" /> Edit
+                </Button>
+                <Button Color="ButtonColor.Danger" @onclick="OnDelete">
+                    <Icon Name="IconName.Trash" /> Delete
+                </Button>
+            </div>
         </div>
     </div>
 </div>
+
+<BodyMeasurementModal @ref="editModal" 
+                     IsEdit="true" 
+                     ExistingMeasurement="Measurement"
+                     OnMeasurementSaved="HandleEdit" />
 
 @code {
     [Parameter, EditorRequired]
@@ -177,87 +81,43 @@
     [Parameter]
     public EventCallback<int> OnToggleRequested { get; set; }
 
-    private bool isEditing;
-    private BodyMeasurement? editingMeasurement;
+    private BodyMeasurementModal? editModal;
 
-    private record MeasurementCardInfo(string Label, string Value);
+    private record MeasurementInfo(string Label, string Value);
 
-    private List<MeasurementCardInfo> GetMeasurementCards()
+    private List<MeasurementInfo> GetMeasurements()
     {
-        var cards = new List<MeasurementCardInfo>();
+        var measurements = new List<MeasurementInfo>();
 
         if (Measurement.Height.HasValue)
-        {
-            cards.Add(new("Height", $"{Measurement.Height:F1} cm"));
-        }
+            measurements.Add(new("Height", $"{Measurement.Height:F1} cm"));
         if (Measurement.Weight.HasValue)
-        {
-            cards.Add(new("Weight", $"{Measurement.Weight:F1} kg"));
-        }
+            measurements.Add(new("Weight", $"{Measurement.Weight:F1} kg"));
         if (Measurement.FatMassPercentage.HasValue)
-        {
-            cards.Add(new("Fat Mass", $"{Measurement.FatMassPercentage:F1}%"));
-        }
+            measurements.Add(new("Fat Mass", $"{Measurement.FatMassPercentage:F1}%"));
         if (Measurement.MuscleMassPercentage.HasValue)
-        {
-            cards.Add(new("Muscle Mass", $"{Measurement.MuscleMassPercentage:F1}%"));
-        }
+            measurements.Add(new("Muscle Mass", $"{Measurement.MuscleMassPercentage:F1}%"));
         if (Measurement.WaistCircumference.HasValue)
-        {
-            cards.Add(new("Waist", $"{Measurement.WaistCircumference:F1} cm"));
-        }
+            measurements.Add(new("Waist", $"{Measurement.WaistCircumference:F1} cm"));
         if (Measurement.ChestCircumference.HasValue)
-        {
-            cards.Add(new("Chest", $"{Measurement.ChestCircumference:F1} cm"));
-        }
+            measurements.Add(new("Chest", $"{Measurement.ChestCircumference:F1} cm"));
         if (Measurement.ArmCircumference.HasValue)
-        {
-            cards.Add(new("Arm", $"{Measurement.ArmCircumference:F1} cm"));
-        }
+            measurements.Add(new("Arm", $"{Measurement.ArmCircumference:F1} cm"));
         if (Measurement.ThighCircumference.HasValue)
-        {
-            cards.Add(new("Thigh", $"{Measurement.ThighCircumference:F1} cm"));
-        }
+            measurements.Add(new("Thigh", $"{Measurement.ThighCircumference:F1} cm"));
 
-        return cards;
+        return measurements;
     }
 
-    private void StartEdit()
+    private async Task StartEdit()
     {
-        editingMeasurement = new()
+        if (editModal != null)
         {
-            Id = Measurement.Id,
-            UserId = Measurement.UserId,
-            Date = Measurement.Date,
-            Weight = Measurement.Weight,
-            Height = Measurement.Height,
-            FatMassPercentage = Measurement.FatMassPercentage,
-            MuscleMassPercentage = Measurement.MuscleMassPercentage,
-            WaistCircumference = Measurement.WaistCircumference,
-            ChestCircumference = Measurement.ChestCircumference,
-            ArmCircumference = Measurement.ArmCircumference,
-            ThighCircumference = Measurement.ThighCircumference,
-            Notes = Measurement.Notes
-        };
-        isEditing = true;
-    }
-
-    private void CancelEdit()
-    {
-        isEditing = false;
-        editingMeasurement = null;
-    }
-
-    private async Task HandleSubmit()
-    {
-        if (editingMeasurement != null)
-        {
-            await OnEditRequested.InvokeAsync(editingMeasurement);
-            isEditing = false;
-            editingMeasurement = null;
+            await editModal.Modal.ShowAsync();
         }
     }
 
+    private Task HandleEdit(BodyMeasurement measurement) => OnEditRequested.InvokeAsync(measurement);
     private Task OnToggle() => OnToggleRequested.InvokeAsync(Measurement.Id);
     private Task OnDelete() => OnDeleteRequested.InvokeAsync(Measurement);
 }

@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using GymTracker.Data.Validation;
 
 namespace GymTracker.Data;
 
+[RequireAtLeastOneMeasurement]
 public class BodyMeasurement
 {
     [Key]

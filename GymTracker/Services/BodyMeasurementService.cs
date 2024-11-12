@@ -1,5 +1,5 @@
-using GymTracker.Data;
 using Microsoft.EntityFrameworkCore;
+using GymTracker.Data;
 
 namespace GymTracker.Services;
 
@@ -12,69 +12,71 @@ public class BodyMeasurementService : IBodyMeasurementService
         _context = context;
     }
 
-    public async Task<IEnumerable<BodyMeasurement>> GetUserMeasurementsAsync(ApplicationUser user)
+    public async Task<IEnumerable<BodyMeasurement>> GetUserMeasurementsAsync(string userId)
     {
         return await _context.BodyMeasurements
-            .Where(m => m.UserId == user.Id)
+            .Where(m => m.UserId == userId)
             .OrderByDescending(m => m.Date)
             .ToListAsync();
     }
 
-    public async Task<BodyMeasurement?> GetMeasurementAsync(ApplicationUser user, int measurementId)
+    public async Task<BodyMeasurement?> GetMeasurementAsync(string userId, int measurementId)
     {
         return await _context.BodyMeasurements
-            .Where(m => m.UserId == user.Id && m.Id == measurementId)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
     }
 
-    public async Task<BodyMeasurement?> GetLatestMeasurementAsync(ApplicationUser user)
+    public async Task<BodyMeasurement?> GetLatestMeasurementAsync(string userId)
     {
         return await _context.BodyMeasurements
-            .Where(m => m.UserId == user.Id)
+            .Where(m => m.UserId == userId)
             .OrderByDescending(m => m.Date)
             .FirstOrDefaultAsync();
     }
 
-    public async Task<BodyMeasurement> CreateMeasurementAsync(ApplicationUser user, BodyMeasurement measurement)
+    public async Task<BodyMeasurement> CreateMeasurementAsync(string userId, BodyMeasurement measurement)
     {
-        measurement.UserId = user.Id;
-        _context.BodyMeasurements.Add(measurement);
+        // Ensure the measurement is assigned to the correct user
+        measurement.UserId = userId;
+
+        await _context.BodyMeasurements.AddAsync(measurement);
         await _context.SaveChangesAsync();
+
         return measurement;
     }
 
-    public async Task<BodyMeasurement?> UpdateMeasurementAsync(ApplicationUser user, int measurementId, BodyMeasurement measurement)
+    public async Task<BodyMeasurement?> UpdateMeasurementAsync(string userId, int measurementId, BodyMeasurement updatedMeasurement)
     {
         var existingMeasurement = await _context.BodyMeasurements
-            .Where(m => m.UserId == user.Id && m.Id == measurementId)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
 
-        if (existingMeasurement is null)
+        if (existingMeasurement == null)
         {
             return null;
         }
 
-        existingMeasurement.Date = measurement.Date;
-        existingMeasurement.Weight = measurement.Weight;
-        existingMeasurement.Height = measurement.Height;
-        existingMeasurement.FatMassPercentage = measurement.FatMassPercentage;
-        existingMeasurement.MuscleMassPercentage = measurement.MuscleMassPercentage;
-        existingMeasurement.WaistCircumference = measurement.WaistCircumference;
-        existingMeasurement.ChestCircumference = measurement.ChestCircumference;
-        existingMeasurement.ArmCircumference = measurement.ArmCircumference;
-        existingMeasurement.ThighCircumference = measurement.ThighCircumference;
-        existingMeasurement.Notes = measurement.Notes;
+        // Update only the allowed properties
+        existingMeasurement.Date = updatedMeasurement.Date;
+        existingMeasurement.Weight = updatedMeasurement.Weight;
+        existingMeasurement.Height = updatedMeasurement.Height;
+        existingMeasurement.FatMassPercentage = updatedMeasurement.FatMassPercentage;
+        existingMeasurement.MuscleMassPercentage = updatedMeasurement.MuscleMassPercentage;
+        existingMeasurement.WaistCircumference = updatedMeasurement.WaistCircumference;
+        existingMeasurement.ChestCircumference = updatedMeasurement.ChestCircumference;
+        existingMeasurement.ArmCircumference = updatedMeasurement.ArmCircumference;
+        existingMeasurement.ThighCircumference = updatedMeasurement.ThighCircumference;
+        existingMeasurement.Notes = updatedMeasurement.Notes;
 
         await _context.SaveChangesAsync();
         return existingMeasurement;
     }
 
-    public async Task<bool> DeleteMeasurementAsync(ApplicationUser user, int measurementId)
+    public async Task<bool> DeleteMeasurementAsync(string userId, int measurementId)
     {
         var measurement = await _context.BodyMeasurements
-            .FirstOrDefaultAsync(m => m.UserId == user.Id && m.Id == measurementId);
-        
-        if (measurement is null)
+            .FirstOrDefaultAsync(m => m.UserId == userId && m.Id == measurementId);
+
+        if (measurement == null)
         {
             return false;
         }
@@ -82,5 +84,13 @@ public class BodyMeasurementService : IBodyMeasurementService
         _context.BodyMeasurements.Remove(measurement);
         await _context.SaveChangesAsync();
         return true;
+    }
+
+    public async Task<IEnumerable<BodyMeasurement>> GetMeasurementsInRangeAsync(string userId, DateOnly startDate, DateOnly endDate)
+    {
+        return await _context.BodyMeasurements
+            .Where(m => m.UserId == userId && m.Date >= startDate && m.Date <= endDate)
+            .OrderByDescending(m => m.Date)
+            .ToListAsync();
     }
 }

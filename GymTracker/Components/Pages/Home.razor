@@ -1,6 +1,5 @@
-﻿@rendermode InteractiveServer
-
-@page "/"
+﻿@page "/"
+@rendermode InteractiveServer
 
 @using GymTracker.Components.Dashboard
 
@@ -9,10 +8,18 @@
 <h3>Dashboard</h3>
 <div class="row justify-content-center">
     <Calendar @bind-SelectedDate="selectedDate" />
-    <CreateSection SelectedDate="selectedDate"/>
+    <CreateSection 
+        SelectedDate="selectedDate"
+        OnMeasurementAdded="HandleMeasurementAdded" />
 </div>
 <EventList SelectedDate="selectedDate" />
 
 @code {
     private DateOnly? selectedDate = DateOnly.FromDateTime(DateTime.Today);
+
+    private void HandleMeasurementAdded()
+    {
+        // Refresh your event list or other components as needed
+        StateHasChanged();
+    }
 }

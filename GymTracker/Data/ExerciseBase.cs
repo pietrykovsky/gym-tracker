@@ -10,13 +10,14 @@ public abstract class ExerciseBase
     public int Id { get; set; }
 
     [Required]
-    [StringLength(30, MinimumLength = 3, ErrorMessage = "Name must be between 3 and 30 characters.")]
+    [StringLength(50, MinimumLength = 3, ErrorMessage = "Name must be between 3 and 50 characters.")]
     public string Name { get; set; } = string.Empty;
+
+    [Required]
+    public ExerciseDifficulty Difficulty { get; set; } = ExerciseDifficulty.Beginner;
 
     [StringLength(200, ErrorMessage = "Description must be less than 200 characters.")]
     public string? Description { get; set; } = string.Empty;
 
-    [Required]
-    public int CategoryId { get; set; }
-    public virtual ExerciseCategory Category { get; set; } = null!;
+    public virtual List<ExerciseCategory> Categories { get; set; } = [];
 }

@@ -64,6 +64,8 @@ builder.Services.AddScoped<IExerciseCategoryService, ExerciseCategoryService>();
 builder.Services.AddScoped<IDefaultExerciseService, DefaultExerciseService>();
 builder.Services.AddScoped<IUserMadeExerciseService, UserMadeExerciseService>();
 
+builder.Services.AddScoped<DatabaseSeederService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -80,6 +82,10 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     dbContext.Database.Migrate(); // Apply migrations automatically
+
+    // Seed the database with default data
+    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeederService>();
+    await seeder.SeedAsync();
 }
 
 app.UseStaticFiles();

@@ -17,10 +17,9 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.UserMadeExercises
             .AsNoTracking()
-            .Include(e => e.Category)
+            .Include(e => e.Categories)
             .Where(e => e.UserId == userId)
-            .OrderBy(e => e.Category.Name)
-            .ThenBy(e => e.Name)
+            .OrderBy(e => e.Name)
             .ToListAsync();
     }
 
@@ -29,7 +28,19 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.UserMadeExercises
             .AsNoTracking()
-            .Where(e => e.UserId == userId && e.CategoryId == categoryId)
+            .Include(e => e.Categories)
+            .Where(e => e.UserId == userId && e.Categories.Any(c => c.Id == categoryId))
+            .OrderBy(e => e.Name)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<UserMadeExercise>> GetUserExercisesByDifficultyAsync(string userId, ExerciseDifficulty difficulty)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+        return await context.UserMadeExercises
+            .AsNoTracking()
+            .Include(e => e.Categories)
+            .Where(e => e.UserId == userId && e.Difficulty == difficulty)
             .OrderBy(e => e.Name)
             .ToListAsync();
     }
@@ -39,31 +50,65 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.UserMadeExercises
             .AsNoTracking()
-            .Include(e => e.Category)
+            .Include(e => e.Categories)
             .FirstOrDefaultAsync(e => e.UserId == userId && e.Id == exerciseId);
     }
 
-    public async Task<UserMadeExercise> CreateUserExerciseAsync(string userId, UserMadeExercise exercise)
+    public async Task<UserMadeExercise> CreateUserExerciseAsync(string userId, UserMadeExercise exercise, IEnumerable<int> categoryIds)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+
+        var categories = await context.ExerciseCategories
+            .Where(c => categoryIds.Contains(c.Id))
+            .ToListAsync();
+
+        if (categories.Count == 0)
+        {
+            throw new ArgumentException("At least one valid category must be provided.");
+        }
+
         exercise.UserId = userId;
+
+        foreach (var category in categories)
+        {
+            exercise.Categories.Add(category);
+        }
+
         await context.UserMadeExercises.AddAsync(exercise);
         await context.SaveChangesAsync();
+
         return exercise;
     }
 
-    public async Task<UserMadeExercise?> UpdateUserExerciseAsync(string userId, int exerciseId, UserMadeExercise updatedExercise)
+    public async Task<UserMadeExercise?> UpdateUserExerciseAsync(string userId, int exerciseId, UserMadeExercise updatedExercise, IEnumerable<int> categoryIds)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
+
         var exercise = await context.UserMadeExercises
+            .Include(e => e.Categories)
             .FirstOrDefaultAsync(e => e.UserId == userId && e.Id == exerciseId);
 
         if (exercise == null)
             return null;
 
+        var categories = await context.ExerciseCategories
+            .Where(c => categoryIds.Contains(c.Id))
+            .ToListAsync();
+
+        if (categories.Count == 0)
+        {
+            throw new ArgumentException("At least one valid category must be provided.");
+        }
+
         exercise.Name = updatedExercise.Name;
         exercise.Description = updatedExercise.Description;
-        exercise.CategoryId = updatedExercise.CategoryId;
+        exercise.Difficulty = updatedExercise.Difficulty;
+        exercise.Categories.Clear();
+
+        foreach (var category in categories)
+        {
+            exercise.Categories.Add(category);
+        }
 
         await context.SaveChangesAsync();
         return exercise;

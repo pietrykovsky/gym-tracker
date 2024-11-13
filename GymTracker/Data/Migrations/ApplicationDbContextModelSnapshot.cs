@@ -22,6 +22,36 @@ namespace GymTracker.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DefaultExerciseExerciseCategory", b =>
+                {
+                    b.Property<int>("CategoriesId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DefaultExercisesId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CategoriesId", "DefaultExercisesId");
+
+                    b.HasIndex("DefaultExercisesId");
+
+                    b.ToTable("DefaultExerciseExerciseCategory");
+                });
+
+            modelBuilder.Entity("ExerciseCategoryUserMadeExercise", b =>
+                {
+                    b.Property<int>("CategoriesId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserMadeExercisesId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CategoriesId", "UserMadeExercisesId");
+
+                    b.HasIndex("UserMadeExercisesId");
+
+                    b.ToTable("ExerciseCategoryUserMadeExercise");
+                });
+
             modelBuilder.Entity("GymTracker.Data.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
@@ -172,21 +202,19 @@ namespace GymTracker.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Description")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("Difficulty")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -227,25 +255,23 @@ namespace GymTracker.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Description")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("Difficulty")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -387,6 +413,36 @@ namespace GymTracker.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("DefaultExerciseExerciseCategory", b =>
+                {
+                    b.HasOne("GymTracker.Data.ExerciseCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GymTracker.Data.DefaultExercise", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultExercisesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ExerciseCategoryUserMadeExercise", b =>
+                {
+                    b.HasOne("GymTracker.Data.ExerciseCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GymTracker.Data.UserMadeExercise", null)
+                        .WithMany()
+                        .HasForeignKey("UserMadeExercisesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GymTracker.Data.BodyMeasurement", b =>
                 {
                     b.HasOne("GymTracker.Data.ApplicationUser", "User")
@@ -398,32 +454,13 @@ namespace GymTracker.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("GymTracker.Data.DefaultExercise", b =>
-                {
-                    b.HasOne("GymTracker.Data.ExerciseCategory", "Category")
-                        .WithMany("DefaultExercises")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Category");
-                });
-
             modelBuilder.Entity("GymTracker.Data.UserMadeExercise", b =>
                 {
-                    b.HasOne("GymTracker.Data.ExerciseCategory", "Category")
-                        .WithMany("UserMadeExercises")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("GymTracker.Data.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Category");
 
                     b.Navigation("User");
                 });
@@ -477,13 +514,6 @@ namespace GymTracker.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("GymTracker.Data.ExerciseCategory", b =>
-                {
-                    b.Navigation("DefaultExercises");
-
-                    b.Navigation("UserMadeExercises");
                 });
 #pragma warning restore 612, 618
         }

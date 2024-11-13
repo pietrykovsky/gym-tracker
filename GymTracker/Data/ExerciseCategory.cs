@@ -15,6 +15,6 @@ public class ExerciseCategory
     [StringLength(200, ErrorMessage = "Description must be less than 200 characters.")]
     public string? Description { get; set; } = string.Empty;
 
-    public virtual ICollection<DefaultExercise> DefaultExercises { get; } = new List<DefaultExercise>();
-    public virtual ICollection<UserMadeExercise> UserMadeExercises { get; } = new List<UserMadeExercise>();
+    public virtual List<DefaultExercise> DefaultExercises { get; set; } = [];
+    public virtual List<UserMadeExercise> UserMadeExercises { get; set; } = [];
 }

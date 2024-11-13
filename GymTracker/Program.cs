@@ -60,6 +60,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddBlazorBootstrap();
 builder.Services.AddScoped<IBodyMeasurementService, BodyMeasurementService>();
+builder.Services.AddScoped<IExerciseCategoryService, ExerciseCategoryService>();
+builder.Services.AddScoped<IDefaultExerciseService, DefaultExerciseService>();
+builder.Services.AddScoped<IUserMadeExerciseService, UserMadeExerciseService>();
 
 var app = builder.Build();
 

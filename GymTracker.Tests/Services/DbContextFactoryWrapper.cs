@@ -1,3 +1,4 @@
+using System;
 using GymTracker.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,10 +8,10 @@ internal class DbContextFactoryWrapper : IDbContextFactory<ApplicationDbContext>
 {
     private readonly TestApplicationDbContext _context;
 
-    public DbContextFactoryWrapper(string databaseName = "InMemoryTest")
+    public DbContextFactoryWrapper(string? databaseName = null)
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseInMemoryDatabase(databaseName)
+            .UseInMemoryDatabase(databaseName ?? $"InMemoryTest_{Guid.NewGuid()}")
             .Options;
         _context = new TestApplicationDbContext(options);
     }

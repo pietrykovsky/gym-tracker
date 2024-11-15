@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GymTracker.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20241114103022_AddTrainingPlansAndActivities")]
-    partial class AddTrainingPlansAndActivities
+    [Migration("20241115170059_AddCategoriesPlansActivities")]
+    partial class AddCategoriesPlansActivities
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,51 @@ namespace GymTracker.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("DefaultExerciseExerciseCategory", b =>
+                {
+                    b.Property<int>("CategoriesId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DefaultExercisesId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CategoriesId", "DefaultExercisesId");
+
+                    b.HasIndex("DefaultExercisesId");
+
+                    b.ToTable("DefaultExerciseExerciseCategory");
+                });
+
+            modelBuilder.Entity("DefaultTrainingPlanTrainingPlanCategory", b =>
+                {
+                    b.Property<int>("CategoriesId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DefaultTrainingPlansId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CategoriesId", "DefaultTrainingPlansId");
+
+                    b.HasIndex("DefaultTrainingPlansId");
+
+                    b.ToTable("DefaultTrainingPlanTrainingPlanCategory");
+                });
+
+            modelBuilder.Entity("ExerciseCategoryUserMadeExercise", b =>
+                {
+                    b.Property<int>("CategoriesId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserMadeExercisesId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CategoriesId", "UserMadeExercisesId");
+
+                    b.HasIndex("UserMadeExercisesId");
+
+                    b.ToTable("ExerciseCategoryUserMadeExercise");
+                });
 
             modelBuilder.Entity("GymTracker.Data.ActivityBase", b =>
                 {
@@ -246,17 +291,12 @@ namespace GymTracker.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<int?>("ExerciseBaseId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ExerciseBaseId");
 
                     b.HasIndex("Name")
                         .IsUnique();
@@ -342,15 +382,10 @@ namespace GymTracker.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
-                    b.Property<int?>("TrainingPlanBaseId")
-                        .HasColumnType("integer");
-
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
                         .IsUnique();
-
-                    b.HasIndex("TrainingPlanBaseId");
 
                     b.ToTable("TrainingPlanCategories");
                 });
@@ -487,6 +522,21 @@ namespace GymTracker.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("TrainingPlanCategoryUserMadeTrainingPlan", b =>
+                {
+                    b.Property<int>("CategoriesId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserMadeTrainingPlansId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CategoriesId", "UserMadeTrainingPlansId");
+
+                    b.HasIndex("UserMadeTrainingPlansId");
+
+                    b.ToTable("TrainingPlanCategoryUserMadeTrainingPlan");
+                });
+
             modelBuilder.Entity("GymTracker.Data.PlanActivity", b =>
                 {
                     b.HasBaseType("GymTracker.Data.ActivityBase");
@@ -503,11 +553,6 @@ namespace GymTracker.Migrations
                 {
                     b.HasBaseType("GymTracker.Data.ExerciseBase");
 
-                    b.Property<int?>("ExerciseCategoryId")
-                        .HasColumnType("integer");
-
-                    b.HasIndex("ExerciseCategoryId");
-
                     b.HasDiscriminator().HasValue("DefaultExercise");
                 });
 
@@ -515,22 +560,11 @@ namespace GymTracker.Migrations
                 {
                     b.HasBaseType("GymTracker.Data.ExerciseBase");
 
-                    b.Property<int?>("ExerciseCategoryId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasIndex("ExerciseCategoryId");
-
                     b.HasIndex("UserId");
-
-                    b.ToTable("ExerciseBase", t =>
-                        {
-                            t.Property("ExerciseCategoryId")
-                                .HasColumnName("UserMadeExercise_ExerciseCategoryId");
-                        });
 
                     b.HasDiscriminator().HasValue("UserMadeExercise");
                 });
@@ -555,6 +589,51 @@ namespace GymTracker.Migrations
                     b.HasDiscriminator().HasValue("UserMadeTrainingPlan");
                 });
 
+            modelBuilder.Entity("DefaultExerciseExerciseCategory", b =>
+                {
+                    b.HasOne("GymTracker.Data.ExerciseCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GymTracker.Data.DefaultExercise", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultExercisesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DefaultTrainingPlanTrainingPlanCategory", b =>
+                {
+                    b.HasOne("GymTracker.Data.TrainingPlanCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GymTracker.Data.DefaultTrainingPlan", null)
+                        .WithMany()
+                        .HasForeignKey("DefaultTrainingPlansId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ExerciseCategoryUserMadeExercise", b =>
+                {
+                    b.HasOne("GymTracker.Data.ExerciseCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GymTracker.Data.UserMadeExercise", null)
+                        .WithMany()
+                        .HasForeignKey("UserMadeExercisesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GymTracker.Data.ActivityBase", b =>
                 {
                     b.HasOne("GymTracker.Data.ExerciseBase", "Exercise")
@@ -577,13 +656,6 @@ namespace GymTracker.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("GymTracker.Data.ExerciseCategory", b =>
-                {
-                    b.HasOne("GymTracker.Data.ExerciseBase", null)
-                        .WithMany("Categories")
-                        .HasForeignKey("ExerciseBaseId");
-                });
-
             modelBuilder.Entity("GymTracker.Data.ExerciseSet", b =>
                 {
                     b.HasOne("GymTracker.Data.ActivityBase", "Activity")
@@ -593,13 +665,6 @@ namespace GymTracker.Migrations
                         .IsRequired();
 
                     b.Navigation("Activity");
-                });
-
-            modelBuilder.Entity("GymTracker.Data.TrainingPlanCategory", b =>
-                {
-                    b.HasOne("GymTracker.Data.TrainingPlanBase", null)
-                        .WithMany("Categories")
-                        .HasForeignKey("TrainingPlanBaseId");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -653,6 +718,21 @@ namespace GymTracker.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("TrainingPlanCategoryUserMadeTrainingPlan", b =>
+                {
+                    b.HasOne("GymTracker.Data.TrainingPlanCategory", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GymTracker.Data.UserMadeTrainingPlan", null)
+                        .WithMany()
+                        .HasForeignKey("UserMadeTrainingPlansId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("GymTracker.Data.PlanActivity", b =>
                 {
                     b.HasOne("GymTracker.Data.TrainingPlanBase", "Plan")
@@ -664,19 +744,8 @@ namespace GymTracker.Migrations
                     b.Navigation("Plan");
                 });
 
-            modelBuilder.Entity("GymTracker.Data.DefaultExercise", b =>
-                {
-                    b.HasOne("GymTracker.Data.ExerciseCategory", null)
-                        .WithMany("DefaultExercises")
-                        .HasForeignKey("ExerciseCategoryId");
-                });
-
             modelBuilder.Entity("GymTracker.Data.UserMadeExercise", b =>
                 {
-                    b.HasOne("GymTracker.Data.ExerciseCategory", null)
-                        .WithMany("UserMadeExercises")
-                        .HasForeignKey("ExerciseCategoryId");
-
                     b.HasOne("GymTracker.Data.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
@@ -700,23 +769,6 @@ namespace GymTracker.Migrations
             modelBuilder.Entity("GymTracker.Data.ActivityBase", b =>
                 {
                     b.Navigation("Sets");
-                });
-
-            modelBuilder.Entity("GymTracker.Data.ExerciseBase", b =>
-                {
-                    b.Navigation("Categories");
-                });
-
-            modelBuilder.Entity("GymTracker.Data.ExerciseCategory", b =>
-                {
-                    b.Navigation("DefaultExercises");
-
-                    b.Navigation("UserMadeExercises");
-                });
-
-            modelBuilder.Entity("GymTracker.Data.TrainingPlanBase", b =>
-                {
-                    b.Navigation("Categories");
                 });
 #pragma warning restore 612, 618
         }

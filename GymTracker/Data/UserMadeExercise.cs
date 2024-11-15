@@ -8,4 +8,6 @@ public class UserMadeExercise : ExerciseBase
     public string UserId { get; set; } = string.Empty;
 
     public virtual ApplicationUser User { get; set; } = null!;
+
+    public virtual List<ExerciseCategory> Categories { get; set; } = [];
 }

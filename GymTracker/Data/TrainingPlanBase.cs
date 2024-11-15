@@ -14,6 +14,4 @@ public abstract class TrainingPlanBase
 
     [StringLength(200, ErrorMessage = "Description must be less than 200 characters.")]
     public string? Description { get; set; } = string.Empty;
-
-    public virtual List<TrainingPlanCategory> Categories { get; set; } = [];
 }

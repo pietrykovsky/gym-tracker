@@ -6,20 +6,22 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GymTracker.Migrations
 {
     /// <inheritdoc />
-    public partial class AddTrainingPlansAndActivities : Migration
+    public partial class AddCategoriesPlansActivities : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
+                name: "FK_DefaultExerciseExerciseCategory_DefaultExercises_DefaultExe~",
+                table: "DefaultExerciseExerciseCategory");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_ExerciseCategoryUserMadeExercise_UserMadeExercises_UserMade~",
+                table: "ExerciseCategoryUserMadeExercise");
+
+            migrationBuilder.DropForeignKey(
                 name: "FK_UserMadeExercises_AspNetUsers_UserId",
                 table: "UserMadeExercises");
-
-            migrationBuilder.DropTable(
-                name: "DefaultExerciseExerciseCategory");
-
-            migrationBuilder.DropTable(
-                name: "ExerciseCategoryUserMadeExercise");
 
             migrationBuilder.DropTable(
                 name: "DefaultExercises");
@@ -42,12 +44,6 @@ namespace GymTracker.Migrations
                 table: "ExerciseBase",
                 newName: "IX_ExerciseBase_Name");
 
-            migrationBuilder.AddColumn<int>(
-                name: "ExerciseBaseId",
-                table: "ExerciseCategories",
-                type: "integer",
-                nullable: true);
-
             migrationBuilder.AlterColumn<string>(
                 name: "UserId",
                 table: "ExerciseBase",
@@ -63,18 +59,6 @@ namespace GymTracker.Migrations
                 maxLength: 21,
                 nullable: false,
                 defaultValue: "");
-
-            migrationBuilder.AddColumn<int>(
-                name: "ExerciseCategoryId",
-                table: "ExerciseBase",
-                type: "integer",
-                nullable: true);
-
-            migrationBuilder.AddColumn<int>(
-                name: "UserMadeExercise_ExerciseCategoryId",
-                table: "ExerciseBase",
-                type: "integer",
-                nullable: true);
 
             migrationBuilder.AddPrimaryKey(
                 name: "PK_ExerciseBase",
@@ -101,6 +85,20 @@ namespace GymTracker.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TrainingPlanCategories",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
+                    Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TrainingPlanCategories", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -132,23 +130,51 @@ namespace GymTracker.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "TrainingPlanCategories",
+                name: "DefaultTrainingPlanTrainingPlanCategory",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TrainingPlanBaseId = table.Column<int>(type: "integer", nullable: true),
-                    Name = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
-                    Description = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true)
+                    CategoriesId = table.Column<int>(type: "integer", nullable: false),
+                    DefaultTrainingPlansId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_TrainingPlanCategories", x => x.Id);
+                    table.PrimaryKey("PK_DefaultTrainingPlanTrainingPlanCategory", x => new { x.CategoriesId, x.DefaultTrainingPlansId });
                     table.ForeignKey(
-                        name: "FK_TrainingPlanCategories_TrainingPlanBase_TrainingPlanBaseId",
-                        column: x => x.TrainingPlanBaseId,
+                        name: "FK_DefaultTrainingPlanTrainingPlanCategory_TrainingPlanBase_De~",
+                        column: x => x.DefaultTrainingPlansId,
                         principalTable: "TrainingPlanBase",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DefaultTrainingPlanTrainingPlanCategory_TrainingPlanCategor~",
+                        column: x => x.CategoriesId,
+                        principalTable: "TrainingPlanCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "TrainingPlanCategoryUserMadeTrainingPlan",
+                columns: table => new
+                {
+                    CategoriesId = table.Column<int>(type: "integer", nullable: false),
+                    UserMadeTrainingPlansId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TrainingPlanCategoryUserMadeTrainingPlan", x => new { x.CategoriesId, x.UserMadeTrainingPlansId });
+                    table.ForeignKey(
+                        name: "FK_TrainingPlanCategoryUserMadeTrainingPlan_TrainingPlanBase_U~",
+                        column: x => x.UserMadeTrainingPlansId,
+                        principalTable: "TrainingPlanBase",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_TrainingPlanCategoryUserMadeTrainingPlan_TrainingPlanCatego~",
+                        column: x => x.CategoriesId,
+                        principalTable: "TrainingPlanCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -175,21 +201,6 @@ namespace GymTracker.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ExerciseCategories_ExerciseBaseId",
-                table: "ExerciseCategories",
-                column: "ExerciseBaseId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ExerciseBase_ExerciseCategoryId",
-                table: "ExerciseBase",
-                column: "ExerciseCategoryId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ExerciseBase_UserMadeExercise_ExerciseCategoryId",
-                table: "ExerciseBase",
-                column: "UserMadeExercise_ExerciseCategoryId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ActivityBase_ExerciseId",
                 table: "ActivityBase",
                 column: "ExerciseId");
@@ -198,6 +209,11 @@ namespace GymTracker.Migrations
                 name: "IX_ActivityBase_PlanId",
                 table: "ActivityBase",
                 column: "PlanId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DefaultTrainingPlanTrainingPlanCategory_DefaultTrainingPlan~",
+                table: "DefaultTrainingPlanTrainingPlanCategory",
+                column: "DefaultTrainingPlansId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ExerciseSets_ActivityId",
@@ -216,9 +232,17 @@ namespace GymTracker.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_TrainingPlanCategories_TrainingPlanBaseId",
-                table: "TrainingPlanCategories",
-                column: "TrainingPlanBaseId");
+                name: "IX_TrainingPlanCategoryUserMadeTrainingPlan_UserMadeTrainingPl~",
+                table: "TrainingPlanCategoryUserMadeTrainingPlan",
+                column: "UserMadeTrainingPlansId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_DefaultExerciseExerciseCategory_ExerciseBase_DefaultExercis~",
+                table: "DefaultExerciseExerciseCategory",
+                column: "DefaultExercisesId",
+                principalTable: "ExerciseBase",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_ExerciseBase_AspNetUsers_UserId",
@@ -229,88 +253,53 @@ namespace GymTracker.Migrations
                 onDelete: ReferentialAction.Cascade);
 
             migrationBuilder.AddForeignKey(
-                name: "FK_ExerciseBase_ExerciseCategories_ExerciseCategoryId",
-                table: "ExerciseBase",
-                column: "ExerciseCategoryId",
-                principalTable: "ExerciseCategories",
-                principalColumn: "Id");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_ExerciseBase_ExerciseCategories_UserMadeExercise_ExerciseCa~",
-                table: "ExerciseBase",
-                column: "UserMadeExercise_ExerciseCategoryId",
-                principalTable: "ExerciseCategories",
-                principalColumn: "Id");
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_ExerciseCategories_ExerciseBase_ExerciseBaseId",
-                table: "ExerciseCategories",
-                column: "ExerciseBaseId",
+                name: "FK_ExerciseCategoryUserMadeExercise_ExerciseBase_UserMadeExerc~",
+                table: "ExerciseCategoryUserMadeExercise",
+                column: "UserMadeExercisesId",
                 principalTable: "ExerciseBase",
-                principalColumn: "Id");
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropForeignKey(
+                name: "FK_DefaultExerciseExerciseCategory_ExerciseBase_DefaultExercis~",
+                table: "DefaultExerciseExerciseCategory");
+
+            migrationBuilder.DropForeignKey(
                 name: "FK_ExerciseBase_AspNetUsers_UserId",
                 table: "ExerciseBase");
 
             migrationBuilder.DropForeignKey(
-                name: "FK_ExerciseBase_ExerciseCategories_ExerciseCategoryId",
-                table: "ExerciseBase");
+                name: "FK_ExerciseCategoryUserMadeExercise_ExerciseBase_UserMadeExerc~",
+                table: "ExerciseCategoryUserMadeExercise");
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_ExerciseBase_ExerciseCategories_UserMadeExercise_ExerciseCa~",
-                table: "ExerciseBase");
-
-            migrationBuilder.DropForeignKey(
-                name: "FK_ExerciseCategories_ExerciseBase_ExerciseBaseId",
-                table: "ExerciseCategories");
+            migrationBuilder.DropTable(
+                name: "DefaultTrainingPlanTrainingPlanCategory");
 
             migrationBuilder.DropTable(
                 name: "ExerciseSets");
 
             migrationBuilder.DropTable(
-                name: "TrainingPlanCategories");
+                name: "TrainingPlanCategoryUserMadeTrainingPlan");
 
             migrationBuilder.DropTable(
                 name: "ActivityBase");
 
             migrationBuilder.DropTable(
-                name: "TrainingPlanBase");
+                name: "TrainingPlanCategories");
 
-            migrationBuilder.DropIndex(
-                name: "IX_ExerciseCategories_ExerciseBaseId",
-                table: "ExerciseCategories");
+            migrationBuilder.DropTable(
+                name: "TrainingPlanBase");
 
             migrationBuilder.DropPrimaryKey(
                 name: "PK_ExerciseBase",
                 table: "ExerciseBase");
 
-            migrationBuilder.DropIndex(
-                name: "IX_ExerciseBase_ExerciseCategoryId",
-                table: "ExerciseBase");
-
-            migrationBuilder.DropIndex(
-                name: "IX_ExerciseBase_UserMadeExercise_ExerciseCategoryId",
-                table: "ExerciseBase");
-
-            migrationBuilder.DropColumn(
-                name: "ExerciseBaseId",
-                table: "ExerciseCategories");
-
             migrationBuilder.DropColumn(
                 name: "Discriminator",
-                table: "ExerciseBase");
-
-            migrationBuilder.DropColumn(
-                name: "ExerciseCategoryId",
-                table: "ExerciseBase");
-
-            migrationBuilder.DropColumn(
-                name: "UserMadeExercise_ExerciseCategoryId",
                 table: "ExerciseBase");
 
             migrationBuilder.RenameTable(
@@ -357,69 +346,27 @@ namespace GymTracker.Migrations
                     table.PrimaryKey("PK_DefaultExercises", x => x.Id);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "ExerciseCategoryUserMadeExercise",
-                columns: table => new
-                {
-                    CategoriesId = table.Column<int>(type: "integer", nullable: false),
-                    UserMadeExercisesId = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ExerciseCategoryUserMadeExercise", x => new { x.CategoriesId, x.UserMadeExercisesId });
-                    table.ForeignKey(
-                        name: "FK_ExerciseCategoryUserMadeExercise_ExerciseCategories_Categor~",
-                        column: x => x.CategoriesId,
-                        principalTable: "ExerciseCategories",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ExerciseCategoryUserMadeExercise_UserMadeExercises_UserMade~",
-                        column: x => x.UserMadeExercisesId,
-                        principalTable: "UserMadeExercises",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "DefaultExerciseExerciseCategory",
-                columns: table => new
-                {
-                    CategoriesId = table.Column<int>(type: "integer", nullable: false),
-                    DefaultExercisesId = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DefaultExerciseExerciseCategory", x => new { x.CategoriesId, x.DefaultExercisesId });
-                    table.ForeignKey(
-                        name: "FK_DefaultExerciseExerciseCategory_DefaultExercises_DefaultExe~",
-                        column: x => x.DefaultExercisesId,
-                        principalTable: "DefaultExercises",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_DefaultExerciseExerciseCategory_ExerciseCategories_Categori~",
-                        column: x => x.CategoriesId,
-                        principalTable: "ExerciseCategories",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_DefaultExerciseExerciseCategory_DefaultExercisesId",
-                table: "DefaultExerciseExerciseCategory",
-                column: "DefaultExercisesId");
-
             migrationBuilder.CreateIndex(
                 name: "IX_DefaultExercises_Name",
                 table: "DefaultExercises",
                 column: "Name",
                 unique: true);
 
-            migrationBuilder.CreateIndex(
-                name: "IX_ExerciseCategoryUserMadeExercise_UserMadeExercisesId",
+            migrationBuilder.AddForeignKey(
+                name: "FK_DefaultExerciseExerciseCategory_DefaultExercises_DefaultExe~",
+                table: "DefaultExerciseExerciseCategory",
+                column: "DefaultExercisesId",
+                principalTable: "DefaultExercises",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_ExerciseCategoryUserMadeExercise_UserMadeExercises_UserMade~",
                 table: "ExerciseCategoryUserMadeExercise",
-                column: "UserMadeExercisesId");
+                column: "UserMadeExercisesId",
+                principalTable: "UserMadeExercises",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
 
             migrationBuilder.AddForeignKey(
                 name: "FK_UserMadeExercises_AspNetUsers_UserId",

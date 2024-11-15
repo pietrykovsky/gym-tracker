@@ -23,6 +23,8 @@ public class DatabaseSeederService
             using var context = await _contextFactory.CreateDbContextAsync();
             await SeedCategoriesAsync(context);
             await SeedDefaultExercisesAsync(context);
+            await SeedTrainingPlanCategoriesAsync(context);
+            await SeedDefaultTrainingPlansAsync(context);
             _logger.LogInformation("Database seeding completed successfully");
         }
         catch (Exception ex)
@@ -69,8 +71,80 @@ public class DatabaseSeederService
         await context.SaveChangesAsync();
     }
 
+    private static async Task SeedTrainingPlanCategoriesAsync(ApplicationDbContext context)
+    {
+        foreach (var category in trainingPlanCategories)
+        {
+            if (!await context.TrainingPlanCategories.AnyAsync(c => c.Name == category.Name))
+            {
+                await context.TrainingPlanCategories.AddAsync(new TrainingPlanCategory
+                {
+                    Name = category.Name,
+                    Description = category.Description
+                });
+            }
+        }
+
+        await context.SaveChangesAsync();
+    }
+
+    private static async Task SeedDefaultTrainingPlansAsync(ApplicationDbContext context)
+    {
+        var categories = await context.TrainingPlanCategories.ToDictionaryAsync(c => c.Name, c => c);
+        var exercises = await context.DefaultExercises.ToDictionaryAsync(e => e.Name, e => e);
+
+        foreach (var plan in defaultTrainingPlans)
+        {
+            if (!await context.DefaultTrainingPlans.AnyAsync(p => p.Name == plan.Name))
+            {
+                var newPlan = new DefaultTrainingPlan
+                {
+                    Name = plan.Name,
+                    Description = plan.Description,
+                    Categories = plan.Categories.Select(c => categories[c]).ToList()
+                };
+
+                await context.DefaultTrainingPlans.AddAsync(newPlan);
+                await context.SaveChangesAsync();
+
+                var activities = new List<PlanActivity>();
+                var order = 1;
+
+                foreach (var activity in plan.Activities)
+                {
+                    if (!exercises.ContainsKey(activity.ExerciseName))
+                        continue;
+
+                    var newActivity = new PlanActivity
+                    {
+                        PlanId = newPlan.Id,
+                        ExerciseId = exercises[activity.ExerciseName].Id,
+                        Order = order++,
+                        Sets = activity.Sets.Select((set, index) => new ExerciseSet
+                        {
+                            Order = index + 1,
+                            Repetitions = set.Repetitions,
+                            Weight = set.Weight,
+                            RestAfterDuration = set.RestAfterDuration
+                        }).ToList()
+                    };
+
+                    activities.Add(newActivity);
+                }
+
+                await context.TrainingActivities.AddRangeAsync(activities);
+            }
+        }
+
+        await context.SaveChangesAsync();
+    }
+
     private record Category(string Name, string Description);
     private record Exercise(string Name, string Description, ExerciseDifficulty Difficulty, IEnumerable<string> Categories);
+    private record Set(int Repetitions, float? Weight = null, int? RestAfterDuration = 60);
+    private record Activity(string ExerciseName, IEnumerable<Set> Sets);
+    private record Plan(string Name, string Description, IEnumerable<string> Categories, IEnumerable<Activity> Activities);
+
     private static List<Category> exerciseCategories = new()
     {
         new ("Chest", "Exercises targeting chest muscles including pectoralis major and minor"),
@@ -267,5 +341,338 @@ public class DatabaseSeederService
         new("Hip 90/90", "Hip mobility exercise in 90/90 position", ExerciseDifficulty.Intermediate, ["Flexibility", "Legs"]),
         new("Ankle Mobility", "Various exercises to improve ankle range of motion", ExerciseDifficulty.Beginner, ["Flexibility", "Legs"]),
         new("Wrist Mobility", "Exercises to improve wrist flexibility and strength", ExerciseDifficulty.Beginner, ["Flexibility", "Arms"])
+    };
+
+    private static List<Category> trainingPlanCategories = new()
+    {
+        new("Full Body", "Complete workouts targeting all major muscle groups"),
+        new("Split Routine", "Focused workouts targeting specific muscle groups"),
+        new("Strength", "Programs focused on building strength and muscle"),
+        new("Weight Loss", "Programs designed for fat loss and conditioning"),
+        new("Functional Fitness", "Workouts improving everyday movement patterns"),
+        new("Endurance", "Programs focused on building stamina and endurance"),
+        new("Flexibility", "Programs for improving mobility and flexibility"),
+        new("HIIT", "High-intensity interval training programs"),
+        new("Upper/Lower", "Split routines focusing on upper and lower body")
+    };
+
+    private static List<Plan> defaultTrainingPlans = new()
+    {
+        // Full Body Workouts
+        new(
+            "Full Body Strength",
+            "Efficient strength-focused workout targeting all major muscle groups",
+            new[] { "Full Body", "Strength" },
+            new[]
+            {
+                new Activity("Back Squat", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Flat Barbell Bench Press", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Deadlift", new[] { new Set(5), new Set(5), new Set(5) }),
+                new Activity("Pull-Ups", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Overhead Press", new[] { new Set(8), new Set(8), new Set(8) }),
+                new Activity("Plank", new[] { new Set(0) { RestAfterDuration = 60 }, new Set(0) { RestAfterDuration = 60 }, new Set(0) { RestAfterDuration = 60 } })
+            }
+        ),
+        new(
+            "Full Body Hypertrophy",
+            "Volume-focused workout for muscle growth",
+            new[] { "Full Body" },
+            new[]
+            {
+                new Activity("Back Squat", new[] { new Set(10), new Set(10), new Set(10), new Set(10) }),
+                new Activity("Incline Dumbbell Press", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Romanian Deadlift", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Barbell Rows", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Lateral Raises", new[] { new Set(15), new Set(15), new Set(15) })
+            }
+        ),
+        new(
+            "Full Body HIIT",
+            "High-intensity full body workout for fat loss",
+            new[] { "Full Body", "HIIT", "Weight Loss" },
+            new[]
+            {
+                new Activity("Kettlebell Swings", new[] { new Set(20), new Set(20), new Set(20), new Set(20) }),
+                new Activity("Dumbbell Thrusters", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Burpees", new[] { new Set(15), new Set(15), new Set(15) }),
+                new Activity("Mountain Climbers", new[] { new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 } }),
+                new Activity("Deadlift", new[] { new Set(8), new Set(8), new Set(8) })
+            }
+        ),
+        
+        // Push/Pull/Legs Split
+        new(
+            "Push Day",
+            "Chest, shoulders, and triceps focused workout",
+            new[] { "Split Routine" },
+            new[]
+            {
+                new Activity("Flat Barbell Bench Press", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Overhead Press", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Dumbbell Flyes", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Lateral Raises", new[] { new Set(15), new Set(15), new Set(15) }),
+                new Activity("Tricep Pushdowns", new[] { new Set(15), new Set(15), new Set(15) })
+            }
+        ),
+        new(
+            "Pull Day",
+            "Back and biceps focused workout",
+            new[] { "Split Routine" },
+            new[]
+            {
+                new Activity("Deadlift", new[] { new Set(5), new Set(5), new Set(5), new Set(5) }),
+                new Activity("Pull-Ups", new[] { new Set(10), new Set(10), new Set(10), new Set(10) }),
+                new Activity("Barbell Rows", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Barbell Curl", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Face Pulls", new[] { new Set(15), new Set(15), new Set(15) })
+            }
+        ),
+        new(
+            "Legs Day",
+            "Lower body focused workout",
+            new[] { "Split Routine" },
+            new[]
+            {
+                new Activity("Back Squat", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Romanian Deadlift", new[] { new Set(8), new Set(8), new Set(8) }),
+                new Activity("Bulgarian Split Squats", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Leg Press", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Standing Calf Raises", new[] { new Set(20), new Set(20), new Set(20), new Set(20) })
+            }
+        ),
+
+        // Bro Split
+        new(
+            "Chest Day",
+            "Intensive chest workout",
+            new[] { "Split Routine" },
+            new[]
+            {
+                new Activity("Flat Barbell Bench Press", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Incline Dumbbell Press", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Cable Crossovers", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Push-Ups", new[] { new Set(0) }) // To failure
+            }
+        ),
+        new(
+            "Back Day",
+            "Comprehensive back workout",
+            new[] { "Split Routine" },
+            new[]
+            {
+                new Activity("Pull-Ups", new[] { new Set(10), new Set(10), new Set(10), new Set(10) }),
+                new Activity("Deadlift", new[] { new Set(5), new Set(5), new Set(5), new Set(5) }),
+                new Activity("Single-Arm Dumbbell Row", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Lat Pulldown", new[] { new Set(12), new Set(12), new Set(12) })
+            }
+        ),
+        new(
+            "Shoulders Day",
+            "Focused shoulder development workout",
+            new[] { "Split Routine" },
+            new[]
+            {
+                new Activity("Overhead Press", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Arnold Press", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Lateral Raises", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Reverse Flyes", new[] { new Set(12), new Set(12), new Set(12) })
+            }
+        ),
+        new(
+            "Arms Day",
+            "Biceps and triceps focused workout",
+            new[] { "Split Routine" },
+            new[]
+            {
+                new Activity("Barbell Curl", new[] { new Set(10), new Set(10), new Set(10), new Set(10) }),
+                new Activity("Hammer Curls", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Tricep Dips", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Skull Crushers", new[] { new Set(10), new Set(10), new Set(10) })
+            }
+        ),
+
+        // Upper/Lower Split
+        new(
+            "Upper Body Strength",
+            "Comprehensive upper body strength workout",
+            new[] { "Upper/Lower", "Strength" },
+            new[]
+            {
+                new Activity("Flat Barbell Bench Press", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Pull-Ups", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Overhead Press", new[] { new Set(8), new Set(8), new Set(8) }),
+                new Activity("Barbell Rows", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Barbell Curl", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Tricep Dips", new[] { new Set(12), new Set(12), new Set(12) })
+            }
+        ),
+        new(
+            "Lower Body Strength",
+            "Intensive lower body strength session",
+            new[] { "Upper/Lower", "Strength" },
+            new[]
+            {
+                new Activity("Back Squat", new[] { new Set(8), new Set(8), new Set(8), new Set(8) }),
+                new Activity("Deadlift", new[] { new Set(5), new Set(5), new Set(5) }),
+                new Activity("Leg Press", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Bulgarian Split Squats", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Standing Calf Raises", new[] { new Set(20), new Set(20), new Set(20) })
+            }
+        ),
+
+        // Functional Fitness
+        new(
+            "Core and Stability",
+            "Workout focused on core strength and stability",
+            new[] { "Functional Fitness" },
+            new[]
+            {
+                new Activity("Plank", new[] { new Set(0) { RestAfterDuration = 60 }, new Set(0) { RestAfterDuration = 60 }, new Set(0) { RestAfterDuration = 60 } }),
+                new Activity("Side Plank", new[] { new Set(0) { RestAfterDuration = 45 }, new Set(0) { RestAfterDuration = 45 }, new Set(0) { RestAfterDuration = 45 } }),
+                new Activity("Dead Bug", new[] { new Set(15), new Set(15), new Set(15) }),
+                new Activity("Bird Dog", new[] { new Set(15), new Set(15), new Set(15) })
+            }
+        ),
+        new(
+            "Balance and Agility",
+            "Workout for improving balance and movement control",
+            new[] { "Functional Fitness" },
+            new[]
+            {
+                new Activity("Single-Leg Deadlift", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Box Jumps", new[] { new Set(8), new Set(8), new Set(8) }),
+                new Activity("Bulgarian Split Squats", new[] { new Set(10), new Set(10), new Set(10) }),
+                new Activity("Farmer's Walk", new[] { new Set(0) { RestAfterDuration = 30 }, new Set(0) { RestAfterDuration = 30 }, new Set(0) { RestAfterDuration = 30 } })
+            }
+        ),
+        new(
+            "Functional Endurance",
+            "Circuit training for functional endurance",
+            new[] { "Functional Fitness", "Endurance" },
+            new[]
+            {
+                new Activity("Kettlebell Swings", new[] { new Set(20), new Set(20), new Set(20) }),
+                new Activity("Clean and Jerk", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Farmer's Walk", new[] { new Set(0) { RestAfterDuration = 30 }, new Set(0) { RestAfterDuration = 30 }, new Set(0) { RestAfterDuration = 30 }, new Set(0) { RestAfterDuration = 30 } })
+            }
+        ),
+
+        // Weight Loss/HIIT Programs
+        new(
+            "HIIT Circuit A",
+            "High-intensity interval training for fat loss - Circuit A",
+            new[] { "Weight Loss", "HIIT" },
+            new[]
+            {
+                new Activity("Jump Squats", new[] { new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 } }),
+                new Activity("Push-Ups", new[] { new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 } }),
+                new Activity("Burpees", new[] { new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 } }),
+                new Activity("Mountain Climbers", new[] { new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 } }),
+                new Activity("High Knees", new[] { new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 }, new Set(0) { RestAfterDuration = 40 } })
+            }
+        ),
+        new(
+            "HIIT Circuit B",
+            "High-intensity interval training for fat loss - Circuit B",
+            new[] { "Weight Loss", "HIIT" },
+            new[]
+            {
+                new Activity("Kettlebell Swings", new[] { new Set(20), new Set(20), new Set(20) }),
+                new Activity("Dumbbell Thrusters", new[] { new Set(12), new Set(12), new Set(12) }),
+                new Activity("Box Jumps", new[] { new Set(15), new Set(15), new Set(15) }),
+                new Activity("Russian Twists", new[] { new Set(20), new Set(20), new Set(20) })
+            }
+        ),
+
+        // Endurance Programs
+        new(
+            "Endurance Builder",
+            "Progressive endurance training program",
+            new[] { "Endurance" },
+            new[]
+            {
+                new Activity("Pull-Ups", new[] { new Set(12), new Set(12), new Set(12), new Set(12) }),
+                new Activity("Push-Ups", new[] { new Set(20), new Set(20), new Set(20), new Set(20) }),
+                new Activity("Back Squat", new[] { new Set(15), new Set(15), new Set(15) }),
+                new Activity("Rowing", new[] { new Set(0) { RestAfterDuration = 300 } }) // 5 minutes
+            }
+        ),
+        new(
+            "Cardio Conditioning",
+            "Mixed cardio workout for improved stamina",
+            new[] { "Endurance", "Weight Loss" },
+            new[]
+            {
+                new Activity("High Knees", new[] { new Set(0) { RestAfterDuration = 60 }, new Set(0) { RestAfterDuration = 60 } }),
+                new Activity("Mountain Climbers", new[] { new Set(0) { RestAfterDuration = 60 }, new Set(0) { RestAfterDuration = 60 } }),
+                new Activity("Burpees", new[] { new Set(15), new Set(15), new Set(15) }),
+                new Activity("Jump Rope", new[] { new Set(0) { RestAfterDuration = 120 }, new Set(0) { RestAfterDuration = 120 } }) // 2-minute rounds
+            }
+        ),
+
+        // Flexibility and Mobility Programs
+        new(
+            "Mobility Flow",
+            "Dynamic stretching routine for improved flexibility",
+            new[] { "Flexibility" },
+            new[]
+            {
+                new Activity("Cat-Cow Stretch", new[] { new Set(0) { RestAfterDuration = 120 } }),
+                new Activity("World's Greatest Stretch", new[] { new Set(0) { RestAfterDuration = 120 } }),
+                new Activity("Wall Slides", new[] { new Set(15), new Set(15), new Set(15) }),
+                new Activity("Hip Flexor Stretch", new[] { new Set(0) { RestAfterDuration = 60 } })
+            }
+        ),
+        new(
+            "Yoga Flow",
+            "Yoga-inspired flexibility and mindfulness routine",
+            new[] { "Flexibility" },
+            new[]
+            {
+                new Activity("Cat-Cow Stretch", new[] { new Set(0) { RestAfterDuration = 120 } }), // 2 minutes
+                new Activity("Downward Dog", new[] { new Set(0) { RestAfterDuration = 120 } }), // 2 minutes
+                new Activity("Hip Flexor Stretch", new[] { new Set(0) { RestAfterDuration = 120 } }), // 2 minutes per side
+                new Activity("World's Greatest Stretch", new[] { new Set(0) { RestAfterDuration = 120 } }), // 2 minutes per side
+                new Activity("Wall Slides", new[] { new Set(0) { RestAfterDuration = 120 } }) // 2 minutes
+            }
+        ),
+
+        // Strength-Focused Programs
+        new(
+            "Pure Strength Upper",
+            "Heavy upper body strength focus",
+            new[] { "Strength", "Upper/Lower" },
+            new[]
+            {
+                new Activity("Flat Barbell Bench Press", new[] { new Set(6), new Set(6), new Set(6), new Set(6) }),
+                new Activity("Overhead Press", new[] { new Set(6), new Set(6), new Set(6) }),
+                new Activity("Pull-Ups", new[] { new Set(8), new Set(8), new Set(8) }),
+                new Activity("Barbell Rows", new[] { new Set(6), new Set(6), new Set(6) })
+            }
+        ),
+        new(
+            "Pure Strength Lower",
+            "Heavy lower body strength focus",
+            new[] { "Strength", "Upper/Lower" },
+            new[]
+            {
+                new Activity("Back Squat", new[] { new Set(5), new Set(5), new Set(5), new Set(5) }),
+                new Activity("Deadlift", new[] { new Set(5), new Set(5), new Set(5) }),
+                new Activity("Romanian Deadlift", new[] { new Set(8), new Set(8), new Set(8) }),
+                new Activity("Bulgarian Split Squats", new[] { new Set(8), new Set(8), new Set(8) })
+            }
+        ),
+        new(
+            "Olympic Lifting",
+            "Technical Olympic weightlifting session",
+            new[] { "Strength" },
+            new[]
+            {
+                new Activity("Clean and Jerk", new[] { new Set(6), new Set(6), new Set(6) }),
+                new Activity("Power Clean", new[] { new Set(5), new Set(5), new Set(5) }),
+                new Activity("Front Squat", new[] { new Set(6), new Set(6), new Set(6) }),
+                new Activity("Push Press", new[] { new Set(8), new Set(8), new Set(8) })
+            }
+        )
     };
 }

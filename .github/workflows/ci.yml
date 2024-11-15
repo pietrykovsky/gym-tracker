@@ -18,8 +18,10 @@ jobs:
       with:
         dotnet-version: 8.0.x
     
-    - name: Install dotnet format tool
-      run: dotnet tool install -g dotnet-format
+    - name: Install tools
+      run: |
+        dotnet tool install -g dotnet-format
+        dotnet tool install -g dotnet-ef
     
     - name: Check code formatting
       run: dotnet format --verify-no-changes
@@ -33,6 +35,18 @@ jobs:
       run: |
         dotnet build GymTracker/GymTracker.csproj --configuration Release --no-restore
         dotnet build GymTracker.Tests/GymTracker.Tests.csproj --configuration Release --no-restore
+
+    - name: Check pending migrations
+      run: |
+        cd GymTracker
+        OUTPUT=$(dotnet ef migrations has-pending-model-changes)
+        if [[ $OUTPUT == *"No changes"* ]]; then
+          echo "No pending model changes detected"
+          exit 0
+        else
+          echo "Error: There are pending model changes that require new migrations"
+          exit 1
+        fi
     
     - name: Run tests
       run: |

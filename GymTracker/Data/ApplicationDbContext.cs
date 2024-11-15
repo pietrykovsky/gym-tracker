@@ -9,4 +9,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public virtual DbSet<ExerciseCategory> ExerciseCategories => Set<ExerciseCategory>();
     public virtual DbSet<DefaultExercise> DefaultExercises => Set<DefaultExercise>();
     public virtual DbSet<UserMadeExercise> UserMadeExercises => Set<UserMadeExercise>();
+    public virtual DbSet<TrainingPlanCategory> TrainingPlanCategories => Set<TrainingPlanCategory>();
+    public virtual DbSet<DefaultTrainingPlan> DefaultTrainingPlans => Set<DefaultTrainingPlan>();
+    public virtual DbSet<UserMadeTrainingPlan> UserMadeTrainingPlans => Set<UserMadeTrainingPlan>();
+    public virtual DbSet<PlanActivity> TrainingActivities => Set<PlanActivity>();
+    public virtual DbSet<ExerciseSet> ExerciseSets => Set<ExerciseSet>();
 }

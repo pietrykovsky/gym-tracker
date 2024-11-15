@@ -24,22 +24,30 @@ public class ExerciseCategoryServiceTests
 
     private void SeedData()
     {
-        var category1 = new ExerciseCategory { Id = 1, Name = "Category1", Description = "Description1" };
-        var category2 = new ExerciseCategory { Id = 2, Name = "Category2", Description = "Description2" };
-        var category3 = new ExerciseCategory { Id = 3, Name = "Category3", Description = "Description3" };
+        // First clear any existing data
+        _dbContext.ExerciseSets.RemoveRange(_dbContext.ExerciseSets);
+        _dbContext.DefaultExercises.RemoveRange(_dbContext.DefaultExercises);
+        _dbContext.UserMadeExercises.RemoveRange(_dbContext.UserMadeExercises);
+        _dbContext.ExerciseCategories.RemoveRange(_dbContext.ExerciseCategories);
+        _dbContext.SaveChanges();
+
+        // Create categories first
+        var category1 = new ExerciseCategory { Name = "Category1", Description = "Description1" };
+        var category2 = new ExerciseCategory { Name = "Category2", Description = "Description2" };
+        var category3 = new ExerciseCategory { Name = "Category3", Description = "Description3" };
 
         _dbContext.ExerciseCategories.AddRange(category1, category2, category3);
+        _dbContext.SaveChanges();
 
+        // Create exercises and set up relationships
         var defaultExercise = new DefaultExercise
         {
-            Id = 1,
             Name = "DefaultExercise",
             Categories = new List<ExerciseCategory> { category1 }
         };
 
         var userExercise = new UserMadeExercise
         {
-            Id = 1,
             Name = "UserExercise",
             UserId = "user1",
             Categories = new List<ExerciseCategory> { category1 }

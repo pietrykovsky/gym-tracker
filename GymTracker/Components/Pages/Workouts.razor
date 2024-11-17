@@ -1,0 +1,36 @@
+﻿@page "/workouts"
+@rendermode InteractiveServer
+
+@using BlazorBootstrap
+
+<h3>Workout Management</h3>
+
+<Tabs>
+    <Tab Active="true">
+        <TitleTemplate>
+            <Icon Name="IconName.ListTask" /> My Plans
+        </TitleTemplate>
+        <Content>
+            <p class="mt-3">This is the placeholder content for the <b>Home</b> tab.</p>
+            @* <TrainingPlanList /> *@
+        </Content>
+    </Tab>
+    <Tab>
+        <TitleTemplate>
+            <Icon Name="IconName.Book" /> Exercise Library
+        </TitleTemplate>
+        <Content>
+            <p class="mt-3">This is the placeholder content for the <b>Home</b> tab.</p>
+            @* <ExerciseLibrary /> *@
+        </Content>
+    </Tab>
+    <Tab>
+        <TitleTemplate>
+            <Icon Name="IconName.Table" /> Example Plans
+        </TitleTemplate>
+        <Content>
+            <p class="mt-3">This is the placeholder content for the <b>Home</b> tab.</p>
+            @* <DefaultPlanList /> *@
+        </Content>
+    </Tab>
+</Tabs>

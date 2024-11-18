@@ -1,0 +1,83 @@
+﻿@using GymTracker.Data
+@using GymTracker.Services
+@using System.Security.Claims
+@using BlazorBootstrap
+
+@inject IUserMadeExerciseService UserMadeExerciseService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@namespace GymTracker.Components.Workouts
+
+<Modal @ref="modal" Title="Exercise Details">
+    <BodyTemplate>
+        <div class="row g-3">
+            <div class="col-12">
+                <h5>@exercise!.Name</h5>
+            </div>
+
+            <div class="col-12">
+                <h6 class="text-muted mb-2">Categories</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var category in GetCategories())
+                    {
+                        <Badge Color="BadgeColor.Primary">@category.Name</Badge>
+                    }
+                </div>
+            </div>
+
+            <div class="col-12">
+                <h6 class="text-muted mb-2">Difficulty</h6>
+                <Badge Color="@GetDifficultyColor(exercise.Difficulty)">@exercise.Difficulty</Badge>
+            </div>
+
+            <div class="col-12">
+                <h6 class="text-muted mb-2">Type</h6>
+                <Badge Color="@(exercise is UserMadeExercise ? BadgeColor.Info : BadgeColor.Secondary)">
+                    @(exercise is UserMadeExercise ? "Custom" : "Default")
+                </Badge>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(exercise.Description))
+            {
+                <div class="col-12">
+                    <h6 class="text-muted mb-2">Description</h6>
+                    <p class="mb-0">@exercise.Description</p>
+                </div>
+            }
+        </div>
+    </BodyTemplate>
+</Modal>
+
+@code {
+    [Parameter]
+    public ExerciseBase? Exercise { get; set; }
+
+    private Modal modal = default!;
+    private ExerciseBase? exercise;
+
+    public async Task Show(ExerciseBase exercise)
+    {
+        this.exercise = exercise;
+        await modal.ShowAsync();
+    }
+
+    private IEnumerable<ExerciseCategory> GetCategories()
+    {
+        return exercise switch
+        {
+            DefaultExercise defaultExercise => defaultExercise.Categories,
+            UserMadeExercise userExercise => userExercise.Categories,
+            _ => Enumerable.Empty<ExerciseCategory>()
+        };
+    }
+
+    private static BadgeColor GetDifficultyColor(ExerciseDifficulty difficulty) => difficulty switch
+    {
+        ExerciseDifficulty.Beginner => BadgeColor.Success,
+        ExerciseDifficulty.Novice => BadgeColor.Info,
+        ExerciseDifficulty.Intermediate => BadgeColor.Warning,
+        ExerciseDifficulty.Advanced => BadgeColor.Danger,
+        ExerciseDifficulty.Expert => BadgeColor.Dark,
+        _ => BadgeColor.Secondary
+    };
+}

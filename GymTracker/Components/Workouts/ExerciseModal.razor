@@ -1,0 +1,172 @@
+﻿@rendermode InteractiveServer
+
+@using GymTracker.Data
+@using GymTracker.Services
+@using System.Security.Claims
+@using BlazorBootstrap
+
+@inject IUserMadeExerciseService UserMadeExerciseService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@namespace GymTracker.Components.Workouts
+
+<Modal @ref="modal" Size="ModalSize.Large" Title="@(IsEdit ? "Edit Exercise" : "Create Exercise")">
+    <BodyTemplate>
+        <EditForm Model="@exercise" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger mb-3" />
+
+            <div class="mb-3">
+                <label class="form-label">Name</label>
+                <InputText class="form-control" @bind-Value="exercise.Name" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <InputTextArea class="form-control" @bind-Value="exercise.Description" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Difficulty</label>
+                <InputSelect class="form-select" @bind-Value="exercise.Difficulty">
+                    @foreach (var difficulty in Enum.GetValues<ExerciseDifficulty>())
+                    {
+                        <option value="@difficulty">@difficulty</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Categories</label>
+                <div class="row g-3">
+                    @if (Categories != null && selectedCategories != null)
+                    {
+                        @foreach (var category in Categories)
+                        {
+                            var categoryId = category.Id;
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" 
+                                                 @bind-Value="selectedCategories[categoryId]" />
+                                    <label class="form-check-label">
+                                        @category.Name
+                                    </label>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+                @if (selectedCategories?.Any(x => x.Value) != true)
+                {
+                    <div class="text-danger small mt-2">At least one category must be selected</div>
+                }
+            </div>
+
+            <div class="modal-footer px-0 pb-0">
+                <Button Color="ButtonColor.Secondary" @onclick="HandleCancel">
+                    Cancel
+                </Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" 
+                        Disabled="@(selectedCategories?.Any(x => x.Value) != true)">
+                    @(IsEdit ? "Save Changes" : "Create Exercise")
+                </Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+    [Parameter]
+    public List<ExerciseCategory> Categories { get; set; } = [];
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    private Modal modal = default!;
+    private UserMadeExercise exercise = new();
+    private Dictionary<int, bool>? selectedCategories;
+    private bool IsEdit => exercise.Id != 0;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        InitializeSelectedCategories();
+    }
+
+    protected override void OnParametersSet()
+    {
+        InitializeSelectedCategories();
+    }
+
+    private void InitializeSelectedCategories()
+    {
+        if (Categories?.Any() == true)
+        {
+            selectedCategories = Categories.ToDictionary(
+                c => c.Id,
+                c => IsEdit && exercise.Categories.Any(ec => ec.Id == c.Id)
+            );
+        }
+    }
+
+    public async Task Show(UserMadeExercise? existingExercise = null)
+    {
+        exercise = existingExercise is not null
+            ? new UserMadeExercise
+            {
+                Id = existingExercise.Id,
+                Name = existingExercise.Name,
+                Description = existingExercise.Description,
+                Difficulty = existingExercise.Difficulty,
+                UserId = existingExercise.UserId,
+                Categories = existingExercise.Categories.ToList()
+            }
+            : new UserMadeExercise
+            {
+                UserId = userId!
+            };
+
+        InitializeSelectedCategories();
+        await InvokeAsync(StateHasChanged);
+
+        if (modal is not null)
+        {
+            await modal.ShowAsync();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (string.IsNullOrEmpty(userId) || exercise is null || modal is null || selectedCategories is null) 
+            return;
+
+        var selectedCategoryIds = selectedCategories
+            .Where(x => x.Value)
+            .Select(x => x.Key)
+            .ToList();
+
+        if (IsEdit)
+        {
+            await UserMadeExerciseService.UpdateUserExerciseAsync(
+                userId, exercise.Id, exercise, selectedCategoryIds);
+        }
+        else
+        {
+            await UserMadeExerciseService.CreateUserExerciseAsync(
+                userId, exercise, selectedCategoryIds);
+        }
+
+        await modal.HideAsync();
+        await OnSave.InvokeAsync();
+    }
+
+    private async Task HandleCancel()
+    {
+        if (modal is not null)
+        {
+            await modal.HideAsync();
+        }
+    }
+}

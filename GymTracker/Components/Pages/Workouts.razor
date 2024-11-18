@@ -2,17 +2,17 @@
 @rendermode InteractiveServer
 
 @using BlazorBootstrap
+@using GymTracker.Components.Workouts
 
 <h3>Workout Management</h3>
 
-<Tabs>
+<Tabs EnableFadeEffect="true" NavStyle="NavStyle.Pills">
     <Tab Active="true">
         <TitleTemplate>
             <Icon Name="IconName.ListTask" /> My Plans
         </TitleTemplate>
         <Content>
-            <p class="mt-3">This is the placeholder content for the <b>Home</b> tab.</p>
-            @* <TrainingPlanList /> *@
+            <TrainingPlanList />
         </Content>
     </Tab>
     <Tab>
@@ -20,8 +20,7 @@
             <Icon Name="IconName.Book" /> Exercise Library
         </TitleTemplate>
         <Content>
-            <p class="mt-3">This is the placeholder content for the <b>Home</b> tab.</p>
-            @* <ExerciseLibrary /> *@
+            <ExerciseLibrary />
         </Content>
     </Tab>
     <Tab>
@@ -29,8 +28,7 @@
             <Icon Name="IconName.Table" /> Example Plans
         </TitleTemplate>
         <Content>
-            <p class="mt-3">This is the placeholder content for the <b>Home</b> tab.</p>
-            @* <DefaultPlanList /> *@
+            <DefaultPlanList />
         </Content>
     </Tab>
 </Tabs>

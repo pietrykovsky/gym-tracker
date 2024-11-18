@@ -1,9 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Microsoft.EntityFrameworkCore;
 
 namespace GymTracker.Data;
 
-[Index(nameof(Name), IsUnique = true)]
 public abstract class ExerciseBase
 {
     [Key]

@@ -30,12 +30,12 @@
                     </div>
                 </div>
 
-                @if (activities != null)
+                @if (plan.Activities != null)
                 {
                     <div class="col-12">
                         <h5 class="mb-3">Workout Structure</h5>
                         <div class="list-group">
-                            @foreach (var activity in activities.OrderBy(a => a.Order))
+                            @foreach (var activity in plan.Activities.OrderBy(a => a.Order))
                             {
                                 <div class="list-group-item">
                                     <div class="d-flex justify-content-between align-items-center">
@@ -82,12 +82,10 @@
 @code {
     private Modal modal = default!;
     private DefaultTrainingPlan? plan;
-    private List<PlanActivity>? activities;
 
     public async Task Show(DefaultTrainingPlan plan)
     {
         this.plan = plan;
-        activities = (await ActivityService.GetPlanActivitiesAsync(plan.Id)).ToList();
         await modal.ShowAsync();
     }
 }

@@ -93,7 +93,7 @@
                                         <Badge Color="BadgeColor.Primary" Class="me-1">@category.Name</Badge>
                                     }
                                 </td>
-                                <td>@GetActivityCount(plan) exercises</td>
+                                <td>@plan.Activities.Count exercises</td>
                                 <td>@plan.Description</td>
                             </tr>
                         }
@@ -225,10 +225,5 @@
     private async Task ShowPlanDetails(DefaultTrainingPlan plan)
     {
         await detailPlanModal.Show(plan);
-    }
-
-    private int GetActivityCount(DefaultTrainingPlan plan)
-    {
-        return Task.Run(() => ActivityService.GetPlanActivitiesAsync(plan.Id)).Result.Count();
     }
 }

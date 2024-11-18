@@ -18,6 +18,10 @@ public class UserMadeTrainingPlanService : IUserMadeTrainingPlanService
         return await context.UserMadeTrainingPlans
             .AsNoTracking()
             .Include(p => p.Categories)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Exercise)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Sets)
             .Where(p => p.UserId == userId)
             .OrderBy(p => p.Name)
             .ToListAsync();
@@ -29,6 +33,10 @@ public class UserMadeTrainingPlanService : IUserMadeTrainingPlanService
         return await context.UserMadeTrainingPlans
             .AsNoTracking()
             .Include(p => p.Categories)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Exercise)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Sets)
             .Where(p => p.UserId == userId && p.Categories.Any(c => c.Id == categoryId))
             .OrderBy(p => p.Name)
             .ToListAsync();
@@ -38,8 +46,11 @@ public class UserMadeTrainingPlanService : IUserMadeTrainingPlanService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.UserMadeTrainingPlans
-            .AsNoTracking()
             .Include(p => p.Categories)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Exercise)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Sets)
             .FirstOrDefaultAsync(p => p.UserId == userId && p.Id == planId);
     }
 
@@ -62,6 +73,15 @@ public class UserMadeTrainingPlanService : IUserMadeTrainingPlanService
         plan.UserId = userId;
         plan.Categories = categories;
 
+        foreach (var activity in plan.Activities)
+        {
+            activity.Order = plan.Activities.IndexOf(activity) + 1;
+            foreach (var set in activity.Sets)
+            {
+                set.Order = activity.Sets.IndexOf(set) + 1;
+            }
+        }
+
         await context.UserMadeTrainingPlans.AddAsync(plan);
         await context.SaveChangesAsync();
 
@@ -78,6 +98,8 @@ public class UserMadeTrainingPlanService : IUserMadeTrainingPlanService
 
         var plan = await context.UserMadeTrainingPlans
             .Include(p => p.Categories)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Sets)
             .FirstOrDefaultAsync(p => p.UserId == userId && p.Id == planId);
 
         if (plan == null)
@@ -92,10 +114,28 @@ public class UserMadeTrainingPlanService : IUserMadeTrainingPlanService
             throw new ArgumentException("At least one valid category must be provided.");
         }
 
+        // Update basic plan info
         plan.Name = updatedPlan.Name;
         plan.Description = updatedPlan.Description;
+
+        // Update categories
         plan.Categories.Clear();
         plan.Categories = categories;
+
+        // Update activities and sets
+        var existingActivities = plan.Activities.ToList();
+        plan.Activities.Clear();
+        await context.SaveChangesAsync(); // Save to remove old activities
+
+        foreach (var updatedActivity in updatedPlan.Activities)
+        {
+            updatedActivity.Order = updatedPlan.Activities.IndexOf(updatedActivity) + 1;
+            foreach (var set in updatedActivity.Sets)
+            {
+                set.Order = updatedActivity.Sets.IndexOf(set) + 1;
+            }
+            plan.Activities.Add(updatedActivity);
+        }
 
         await context.SaveChangesAsync();
         return plan;

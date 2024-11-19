@@ -192,29 +192,23 @@
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
+        InitializeSelectedCategories();
+    }
+
+    private async Task LoadExercises()
+    {
         if (!string.IsNullOrEmpty(userId))
         {
             defaultExercises = (await DefaultExerciseService.GetAllExercisesAsync()).ToList();
             userExercises = (await UserMadeExerciseService.GetUserExercisesAsync(userId)).ToList();
         }
-        
-        InitializeSelectedCategories();
-    }
-
-    private void InitializeSelectedCategories()
-    {
-        if (Categories?.Any() == true)
-        {
-            selectedCategories = Categories.ToDictionary(
-                c => c.Id,
-                c => IsEdit && plan.Categories.Any(pc => pc.Id == c.Id)
-            );
-        }
     }
 
     public async Task Show(UserMadeTrainingPlan? existingPlan = null)
     {
+        // Load fresh exercise data first
+        await LoadExercises();
+
         if (existingPlan is not null)
         {
             plan = new()
@@ -253,6 +247,17 @@
         InitializeSelectedCategories();
         await InvokeAsync(StateHasChanged);
         await modal.ShowAsync();
+    }
+
+    private void InitializeSelectedCategories()
+    {
+        if (Categories?.Any() == true)
+        {
+            selectedCategories = Categories.ToDictionary(
+                c => c.Id,
+                c => IsEdit && plan.Categories.Any(pc => pc.Id == c.Id)
+            );
+        }
     }
 
     private async Task HandleValidSubmit()

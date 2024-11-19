@@ -75,34 +75,13 @@
                                         {
                                             <div class="row g-2">
                                                 <div class="col-8">
-                                                    <select class="form-select" @bind="activity.ExerciseType">
-                                                        <option value="">Select Exercise Type</option>
-                                                        <option value="default">Default Exercise</option>
-                                                        <option value="custom">Custom Exercise</option>
-                                                    </select>
+                                                    <AutoComplete @bind-Value="activity.ExerciseName"
+                                                                TItem="ExerciseBase"
+                                                                DataProvider="ExercisesDataProvider"
+                                                                PropertyName="Name"
+                                                                Placeholder="Search exercise..."
+                                                                OnChanged="UpdateExerciseId" />
                                                 </div>
-                                                @if (!string.IsNullOrEmpty(activity.ExerciseType))
-                                                {
-                                                    <div class="col-8">
-                                                        <select class="form-select" @bind="activity.ExerciseId">
-                                                            <option value="0">Select Exercise</option>
-                                                            @if (activity.ExerciseType == "default")
-                                                            {
-                                                                @foreach (var exercise in defaultExercises)
-                                                                {
-                                                                    <option value="@exercise.Id">@exercise.Name</option>
-                                                                }
-                                                            }
-                                                            else
-                                                            {
-                                                                @foreach (var exercise in userExercises)
-                                                                {
-                                                                    <option value="@exercise.Id">@exercise.Name</option>
-                                                                }
-                                                            }
-                                                        </select>
-                                                    </div>
-                                                }
                                             </div>
                                         }
                                         else
@@ -111,9 +90,7 @@
                                                 <span class="me-2">
                                                     @if (activity.ExerciseId > 0)
                                                     {
-                                                        @(activity.ExerciseType == "default" 
-                                                            ? defaultExercises.FirstOrDefault(e => e.Id == activity.ExerciseId)?.Name 
-                                                            : userExercises.FirstOrDefault(e => e.Id == activity.ExerciseId)?.Name)
+                                                        @allExercises.FirstOrDefault(e => e.Id == activity.ExerciseId)?.Name
                                                     }
                                                     else
                                                     {
@@ -218,8 +195,7 @@
     private bool IsEdit => plan.Id != 0;
     private string? userId;
 
-    private List<DefaultExercise> defaultExercises = [];
-    private List<UserMadeExercise> userExercises = [];
+    private List<ExerciseBase> allExercises = [];
     private List<ActivityViewModel> activities = [];
 
     protected override async Task OnInitializedAsync()
@@ -229,19 +205,39 @@
         InitializeSelectedCategories();
     }
 
-    private async Task LoadExercises()
+    private async Task LoadAllExercises()
     {
-        if (!string.IsNullOrEmpty(userId))
+        StateHasChanged();
+
+        try
         {
-            defaultExercises = (await DefaultExerciseService.GetAllExercisesAsync()).ToList();
-            userExercises = (await UserMadeExerciseService.GetUserExercisesAsync(userId)).ToList();
+            var exercises = new List<ExerciseBase>();
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var userExercises = await UserMadeExerciseService.GetUserExercisesAsync(userId);
+                exercises.AddRange(userExercises.Cast<ExerciseBase>());
+            }
+
+            var defaultExercises = await DefaultExerciseService.GetAllExercisesAsync();
+            exercises.AddRange(defaultExercises.Cast<ExerciseBase>());
+            
+            // Sort the exercises - custom exercises first, then default ones
+            allExercises = exercises
+                .OrderByDescending(e => e is UserMadeExercise)
+                .ThenBy(e => e.Name)
+                .ToList();
+        }
+        finally
+        {
+            StateHasChanged();
         }
     }
 
     public async Task Show(UserMadeTrainingPlan? existingPlan = null)
     {
         // Load fresh exercise data first
-        await LoadExercises();
+        await LoadAllExercises();
 
         if (existingPlan is not null)
         {
@@ -258,7 +254,7 @@
                 .OrderBy(a => a.Order)
                 .Select(a => new ActivityViewModel
                 {
-                    ExerciseType = a.Exercise is DefaultExercise ? "default" : "custom",
+                    ExerciseName = a.Exercise is DefaultExercise ? "default" : "custom",
                     ExerciseId = a.ExerciseId,
                     Sets = a.Sets
                         .OrderBy(s => s.Order)
@@ -404,9 +400,32 @@
         StateHasChanged();
     }
 
+    private async Task<AutoCompleteDataProviderResult<ExerciseBase>> ExercisesDataProvider(AutoCompleteDataProviderRequest<ExerciseBase> request)
+    {
+        if (allExercises == null || !allExercises.Any())
+        {
+            await LoadAllExercises();
+        }
+
+        return await Task.FromResult(request.ApplyTo(allExercises!));
+    }
+
+    private void UpdateExerciseId(ExerciseBase? exercise)
+    {
+        if (exercise is null)
+            return;
+
+        var activity = activities.LastOrDefault(a => a.ExerciseName == exercise.Name);
+        if (activity is null)
+            return;
+
+        activity.ExerciseId = exercise.Id;
+        StateHasChanged();
+    }
+
     private class ActivityViewModel
     {
-        public string ExerciseType { get; set; } = string.Empty;
+        public string ExerciseName { get; set; } = string.Empty;
         public int ExerciseId { get; set; }
         public List<SetViewModel> Sets { get; set; } = new();
         public bool IsExpanded { get; set; } = true;

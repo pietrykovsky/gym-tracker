@@ -136,7 +136,7 @@
     }
 </div>
 
-<TrainingPlanModal @ref="planModal" Categories="@categories" OnSave="HandlePlanSaved" />
+<CreateUpdateTrainingPlanModal @ref="planModal" Categories="@categories" OnSave="HandlePlanSaved" />
 <DetailPlanModal @ref="detailPlanModal" />
 
 @code {
@@ -155,7 +155,7 @@
     private List<UserMadeTrainingPlan> pagedPlans = new();
     
     private ConfirmDialog dialog = default!;
-    private TrainingPlanModal planModal = default!;
+    private CreateUpdateTrainingPlanModal planModal = default!;
     private DetailPlanModal detailPlanModal = default!;
 
     protected override async Task OnInitializedAsync()

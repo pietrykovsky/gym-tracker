@@ -182,7 +182,7 @@
     }
 </div>
 
-<ExerciseModal @ref="exerciseModal"
+<CreateUpdateExerciseModal @ref="exerciseModal"
               Categories="@categories"
               OnSave="HandleExerciseSaved" />
 <DetailExerciseModal @ref="detailExerciseModal" />
@@ -205,7 +205,7 @@
     private List<ExerciseBase> pagedExercises = new();
     
     private ConfirmDialog? dialog;
-    private ExerciseModal? exerciseModal;
+    private CreateUpdateExerciseModal? exerciseModal;
     private DetailExerciseModal? detailExerciseModal;
 
     protected override async Task OnInitializedAsync()

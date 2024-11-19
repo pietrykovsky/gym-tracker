@@ -1,0 +1,34 @@
+﻿@page "/workouts"
+@rendermode InteractiveServer
+
+@using BlazorBootstrap
+@using GymTracker.Components.Workouts
+
+<h3>Workout Management</h3>
+
+<Tabs EnableFadeEffect="true" NavStyle="NavStyle.Pills">
+    <Tab Active="true">
+        <TitleTemplate>
+            <Icon Name="IconName.ListTask" /> My Plans
+        </TitleTemplate>
+        <Content>
+            <UserTrainingPlanList />
+        </Content>
+    </Tab>
+    <Tab>
+        <TitleTemplate>
+            <Icon Name="IconName.Book" /> Exercise Library
+        </TitleTemplate>
+        <Content>
+            <ExerciseLibrary />
+        </Content>
+    </Tab>
+    <Tab>
+        <TitleTemplate>
+            <Icon Name="IconName.Table" /> Example Plans
+        </TitleTemplate>
+        <Content>
+            <DefaultPlanList />
+        </Content>
+    </Tab>
+</Tabs>

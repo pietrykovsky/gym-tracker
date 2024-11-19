@@ -1,0 +1,440 @@
+﻿@using GymTracker.Data
+@using GymTracker.Services
+@using System.Security.Claims
+@using BlazorBootstrap
+
+@inject IDefaultExerciseService DefaultExerciseService
+@inject IUserMadeExerciseService UserMadeExerciseService
+@inject IUserMadeTrainingPlanService UserTrainingPlanService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@namespace GymTracker.Components.Workouts
+
+<Modal @ref="modal" Size="ModalSize.Large" Title="@(IsEdit ? "Edit Training Plan" : "Create Training Plan")">
+    <BodyTemplate>
+        <EditForm Model="@plan" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger mb-3" />
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label">Name</label>
+                    <InputText class="form-control" @bind-Value="plan.Name" />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <InputTextArea class="form-control" @bind-Value="plan.Description" />
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Categories</label>
+                    <div class="row g-3">
+                        @if (Categories != null && selectedCategories != null)
+                        {
+                            @foreach (var category in Categories)
+                            {
+                                var categoryId = category.Id;
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <InputCheckbox class="form-check-input" 
+                                                     @bind-Value="selectedCategories[categoryId]" />
+                                        <label class="form-check-label">
+                                            @category.Name
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                    @if (selectedCategories?.Any(x => x.Value) != true)
+                    {
+                        <div class="text-danger small mt-2">At least one category must be selected</div>
+                    }
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <label class="mb-0">Activities</label>
+                    </div>
+
+                    <SortableList TItem="ActivityViewModel"
+                                Data="activities"
+                                Context="activity"
+                                OnUpdate="HandleActivitiesReorder"
+                                Handle=".activity-handle">
+                        <ItemTemplate>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center flex-grow-1">
+                                    <div class="activity-handle pe-2">
+                                        <Icon Name="IconName.GripVertical" />
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        @if (activity.IsExpanded)
+                                        {
+                                            <div class="row g-2">
+                                                <div class="col-8">
+                                                    <AutoComplete @bind-Value="activity.ExerciseName"
+                                                                TItem="ExerciseBase"
+                                                                DataProvider="ExercisesDataProvider"
+                                                                PropertyName="Name"
+                                                                Placeholder="Search exercise..."
+                                                                OnChanged="UpdateExerciseId" />
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex align-items-center">
+                                                <span class="me-2">
+                                                    @if (activity.ExerciseId > 0)
+                                                    {
+                                                        @allExercises.FirstOrDefault(e => e.Id == activity.ExerciseId)?.Name
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">No exercise selected</span>
+                                                    }
+                                                </span>
+                                                <Badge Color="@(activity.Sets.Any() ? BadgeColor.Primary : BadgeColor.Secondary)">
+                                                    @activity.Sets.Count @(activity.Sets.Count == 1 ? "set" : "sets")
+                                                </Badge>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <Button Color="ButtonColor.Light" Size="ButtonSize.Small"
+                                            @onclick="() => ToggleActivity(activity)" Type="ButtonType.Button">
+                                        <Icon Name="@(activity.IsExpanded ? IconName.ChevronUp : IconName.ChevronDown)"/>
+                                    </Button>
+                                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                                            @onclick="() => RemoveActivity(activity)" Type="ButtonType.Button">
+                                        <Icon Name="IconName.X"/>
+                                    </Button>
+                                </div>
+                            </div>
+                            @if (activity.IsExpanded && activity.ExerciseId > 0)
+                            {
+                                <div class="mt-3">
+                                    <SortableList TItem="SetViewModel"
+                                                Data="activity.Sets"
+                                                Context="set"
+                                                OnUpdate="args => HandleSetsReorder(activity, args)"
+                                                Handle=".set-handle">
+                                        <ItemTemplate>
+                                            <div class="d-flex align-items-center gap-3 mb-2">
+                                                <div class="set-handle">
+                                                    <Icon Name="IconName.GripVertical" />
+                                                </div>
+                                                <div class="form-group">
+                                                    <input type="number" class="form-control form-control-sm" 
+                                                        placeholder="Reps"
+                                                        @bind="set.Repetitions" />
+                                                </div>
+                                                <div class="form-group">
+                                                    <input type="number" class="form-control form-control-sm" 
+                                                        placeholder="Weight (kg)"
+                                                        @bind="set.Weight" 
+                                                        step="0.5" />
+                                                </div>
+                                                <div class="form-group">
+                                                    <input type="number" class="form-control form-control-sm" 
+                                                        placeholder="Rest (s)"
+                                                        @bind="set.RestAfterDuration" />
+                                                </div>
+                                                <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                                                        @onclick="() => RemoveSet(activity, set)" Type="ButtonType.Button">
+                                                    <Icon Name="IconName.X"/>
+                                                </Button>
+                                            </div>
+                                        </ItemTemplate>
+                                    </SortableList>
+                                    <div class="d-grid mt-1">
+                                        <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" 
+                                                @onclick="() => AddSet(activity)" Type="ButtonType.Button">
+                                            <Icon Name="IconName.PlusLg" /> Set
+                                        </Button>
+                                    </div>
+                                </div>
+                            }
+                        </ItemTemplate>
+                    </SortableList>
+                    <div class="d-grid mt-1">
+                        <Button Color="ButtonColor.Primary" @onclick="AddActivity" Type="ButtonType.Button">
+                            <Icon Name="IconName.PlusLg" /> Activity
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer px-0 pb-0">
+                <Button Color="ButtonColor.Secondary" @onclick="() => modal.HideAsync()" Type="ButtonType.Button">
+                    Cancel
+                </Button>
+                <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" 
+                        Disabled="@(selectedCategories?.Any(x => x.Value) != true)">
+                    @(IsEdit ? "Save Changes" : "Create Plan")
+                </Button>
+            </div>
+        </EditForm>
+    </BodyTemplate>
+</Modal>
+
+@code {
+    [Parameter]
+    public List<TrainingPlanCategory> Categories { get; set; } = [];
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    public Modal modal = default!;
+    private UserMadeTrainingPlan plan = new();
+    private Dictionary<int, bool>? selectedCategories;
+    private bool IsEdit => plan.Id != 0;
+    private string? userId;
+
+    private List<ExerciseBase> allExercises = [];
+    private List<ActivityViewModel> activities = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        InitializeSelectedCategories();
+    }
+
+    private async Task LoadAllExercises()
+    {
+        StateHasChanged();
+
+        try
+        {
+            var exercises = new List<ExerciseBase>();
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var userExercises = await UserMadeExerciseService.GetUserExercisesAsync(userId);
+                exercises.AddRange(userExercises.Cast<ExerciseBase>());
+            }
+
+            var defaultExercises = await DefaultExerciseService.GetAllExercisesAsync();
+            exercises.AddRange(defaultExercises.Cast<ExerciseBase>());
+            
+            // Sort the exercises - custom exercises first, then default ones
+            allExercises = exercises
+                .OrderByDescending(e => e is UserMadeExercise)
+                .ThenBy(e => e.Name)
+                .ToList();
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    public async Task Show(UserMadeTrainingPlan? existingPlan = null)
+    {
+        // Load fresh exercise data first
+        await LoadAllExercises();
+
+        if (existingPlan is not null)
+        {
+            plan = new()
+            {
+                Id = existingPlan.Id,
+                Name = existingPlan.Name,
+                Description = existingPlan.Description,
+                UserId = existingPlan.UserId,
+                Categories = existingPlan.Categories.ToList()
+            };
+
+            activities = existingPlan.Activities
+                .OrderBy(a => a.Order)
+                .Select(a => new ActivityViewModel
+                {
+                    ExerciseName = a.Exercise is DefaultExercise ? "default" : "custom",
+                    ExerciseId = a.ExerciseId,
+                    Sets = a.Sets
+                        .OrderBy(s => s.Order)
+                        .Select(s => new SetViewModel
+                        {
+                            Repetitions = s.Repetitions,
+                            Weight = s.Weight,
+                            RestAfterDuration = s.RestAfterDuration
+                        })
+                        .ToList()
+                })
+                .ToList();
+        }
+        else
+        {
+            plan = new() { UserId = userId! };
+            activities = [];
+        }
+
+        InitializeSelectedCategories();
+        await InvokeAsync(StateHasChanged);
+        await modal.ShowAsync();
+    }
+
+    private void InitializeSelectedCategories()
+    {
+        if (Categories?.Any() == true)
+        {
+            selectedCategories = Categories.ToDictionary(
+                c => c.Id,
+                c => IsEdit && plan.Categories.Any(pc => pc.Id == c.Id)
+            );
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (string.IsNullOrEmpty(userId) || plan is null || modal is null || selectedCategories is null) 
+            return;
+
+        // Get selected category IDs
+        var selectedCategoryIds = selectedCategories
+            .Where(x => x.Value)
+            .Select(x => x.Key)
+            .ToList();
+
+        // Validate activities
+        if (!activities.Any())
+        {
+            // Show error that at least one activity is required
+            return;
+        }
+
+        // Convert activities and sets to entities
+        var planActivities = activities
+            .Where(a => a.ExerciseId > 0) // Filter out activities without selected exercises
+            .Select((activity, index) => new PlanActivity
+            {
+                Order = index + 1,
+                ExerciseId = activity.ExerciseId,
+                Sets = activity.Sets
+                    .Select((set, setIndex) => new ExerciseSet
+                    {
+                        Order = setIndex + 1,
+                        Repetitions = set.Repetitions,
+                        Weight = set.Weight,
+                        RestAfterDuration = set.RestAfterDuration
+                    })
+                    .ToList()
+            })
+            .ToList();
+
+        if (!planActivities.Any())
+        {
+            // Show error that at least one activity with selected exercise is required
+            return;
+        }
+
+        // Create or update the plan
+        if (IsEdit)
+        {
+            plan.Activities = planActivities;
+            await UserTrainingPlanService.UpdateUserPlanAsync(
+                userId, 
+                plan.Id, 
+                plan, 
+                selectedCategoryIds);
+        }
+        else
+        {
+            plan.Activities = planActivities;
+            await UserTrainingPlanService.CreateUserPlanAsync(
+                userId, 
+                plan, 
+                selectedCategoryIds);
+        }
+
+        await modal.HideAsync();
+        await OnSave.InvokeAsync();
+    }
+
+    private void AddActivity()
+    {
+        activities.Add(new ActivityViewModel());
+        StateHasChanged();
+    }
+
+    private void RemoveActivity(ActivityViewModel activity)
+    {
+        activities.Remove(activity);
+        StateHasChanged();
+    }
+
+    private void AddSet(ActivityViewModel activity)
+    {
+        activity.Sets.Add(new SetViewModel { Repetitions = 12, RestAfterDuration = 60 });
+        StateHasChanged();
+    }
+
+    private void RemoveSet(ActivityViewModel activity, SetViewModel set)
+    {
+        activity.Sets.Remove(set);
+        StateHasChanged();
+    }
+
+    private void HandleActivitiesReorder(SortableListEventArgs args)
+    {
+        var item = activities[args.OldIndex];
+        activities.RemoveAt(args.OldIndex);
+        activities.Insert(args.NewIndex, item);
+    }
+
+    private void HandleSetsReorder(ActivityViewModel activity, SortableListEventArgs args)
+    {
+        var item = activity.Sets[args.OldIndex];
+        activity.Sets.RemoveAt(args.OldIndex);
+        activity.Sets.Insert(args.NewIndex, item);
+    }
+
+    private void ToggleActivity(ActivityViewModel activity)
+    {
+        activity.IsExpanded = !activity.IsExpanded;
+        StateHasChanged();
+    }
+
+    private async Task<AutoCompleteDataProviderResult<ExerciseBase>> ExercisesDataProvider(AutoCompleteDataProviderRequest<ExerciseBase> request)
+    {
+        if (allExercises == null || !allExercises.Any())
+        {
+            await LoadAllExercises();
+        }
+
+        return await Task.FromResult(request.ApplyTo(allExercises!));
+    }
+
+    private void UpdateExerciseId(ExerciseBase? exercise)
+    {
+        if (exercise is null)
+            return;
+
+        var activity = activities.LastOrDefault(a => a.ExerciseName == exercise.Name);
+        if (activity is null)
+            return;
+
+        activity.ExerciseId = exercise.Id;
+        StateHasChanged();
+    }
+
+    private class ActivityViewModel
+    {
+        public string ExerciseName { get; set; } = string.Empty;
+        public int ExerciseId { get; set; }
+        public List<SetViewModel> Sets { get; set; } = new();
+        public bool IsExpanded { get; set; } = true;
+    }
+
+    private class SetViewModel
+    {
+        public int Repetitions { get; set; }
+        public float? Weight { get; set; }
+        public int? RestAfterDuration { get; set; }
+    }
+}

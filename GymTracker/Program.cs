@@ -63,6 +63,10 @@ builder.Services.AddScoped<IBodyMeasurementService, BodyMeasurementService>();
 builder.Services.AddScoped<IExerciseCategoryService, ExerciseCategoryService>();
 builder.Services.AddScoped<IDefaultExerciseService, DefaultExerciseService>();
 builder.Services.AddScoped<IUserMadeExerciseService, UserMadeExerciseService>();
+builder.Services.AddScoped<ITrainingPlanCategoryService, TrainingPlanCategoryService>();
+builder.Services.AddScoped<IDefaultTrainingPlanService, DefaultTrainingPlanService>();
+builder.Services.AddScoped<IUserMadeTrainingPlanService, UserMadeTrainingPlanService>();
+builder.Services.AddScoped<IPlanActivityService, PlanActivityService>();
 
 builder.Services.AddScoped<DatabaseSeederService>();
 

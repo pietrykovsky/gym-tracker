@@ -1,0 +1,392 @@
+﻿@rendermode InteractiveServer
+
+@using GymTracker.Data
+@using GymTracker.Services
+@using BlazorBootstrap
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject IDefaultExerciseService DefaultExerciseService
+@inject IUserMadeExerciseService UserMadeExerciseService
+@inject IExerciseCategoryService CategoryService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@namespace GymTracker.Components.Workouts
+
+<ConfirmDialog @ref="dialog" />
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center mt-4 mb-2">
+                <!-- Search -->
+                <div class="flex-grow-1">
+                    <AutoComplete @bind-Value="searchedExerciseName"
+                                TItem="ExerciseBase"
+                                DataProvider="ExercisesDataProvider"
+                                PropertyName="Name"
+                                Placeholder="Search exercises..."
+                                OnChanged="FilterExercises" />
+                </div>
+
+                <!-- Filters -->
+                <div class="d-flex gap-3 flex-wrap">
+                    <!-- Category Filter -->
+                    <div class="form-group">
+                        <select class="form-select" @bind="selectedCategoryId" @bind:after="FilterExercises">
+                            <option value="0">All Categories</option>
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category.Id">@category.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Difficulty Filter -->
+                    <div class="form-group">
+                        <select class="form-select" @bind="selectedDifficulty" @bind:after="FilterExercises">
+                            <option value="-1">All Difficulties</option>
+                            @foreach (var difficulty in Enum.GetValues<ExerciseDifficulty>())
+                            {
+                                <option value="@((int)difficulty)">@difficulty</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Type Filter -->
+                    <div class="form-group">
+                        <select class="form-select" @bind="selectedType" @bind:after="FilterExercises">
+                            <option value="all">All Types</option>
+                            <option value="custom">Custom Only</option>
+                            <option value="default">Default Only</option>
+                        </select>
+                    </div>
+
+                    <!-- Add Exercise Button -->
+                    <Button Color="ButtonColor.Primary" @onclick="ShowCreateModal">
+                        <Icon Name="IconName.Plus"/> New Exercise
+                    </Button>
+                </div>
+            </div>
+            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center">
+                @if (!string.IsNullOrEmpty(searchedExerciseName))
+                {
+                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearSearchFilter">@searchedExerciseName <Icon Name="IconName.X" /></Badge>
+                }
+                @if (selectedCategoryId > 0)
+                {
+                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearCategoryFilter">@categories.Find(c => c.Id == selectedCategoryId)?.Name <Icon Name="IconName.X" /></Badge>
+                }
+                @if (selectedDifficulty >= 0)
+                {
+                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearDifficultyFilter">@((ExerciseDifficulty)selectedDifficulty) <Icon Name="IconName.X" /></Badge>
+                }
+                @if (selectedType != "all")
+                {
+                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearTypeFilter">@(selectedType == "custom" ? "Custom" : "Default") <Icon Name="IconName.X" /></Badge>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner />
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Categories</th>
+                        <th>Difficulty</th>
+                        <th>Type</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!pagedExercises.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center">No exercises found</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var exercise in pagedExercises)
+                        {
+                            <tr>
+                                <td @onclick="() => detailExerciseModal!.Show(exercise)">@exercise.Name</td>
+                                <td @onclick="() => detailExerciseModal!.Show(exercise)">
+                                    @if (exercise is DefaultExercise defaultExercise)
+                                    {
+                                        @foreach (var category in defaultExercise.Categories)
+                                        {
+                                            <Badge Color="BadgeColor.Primary" Class="me-1">@category.Name</Badge>
+                                        }
+                                    }
+                                    else if (exercise is UserMadeExercise userExercise)
+                                    {
+                                        @foreach (var category in userExercise.Categories)
+                                        {
+                                            <Badge Color="BadgeColor.Primary" Class="me-1">@category.Name</Badge>
+                                        }
+                                    }
+                                </td>
+                                <td @onclick="() => detailExerciseModal!.Show(exercise)">
+                                    <Badge Color="@GetDifficultyColor(exercise.Difficulty)">
+                                        @exercise.Difficulty.ToString()
+                                    </Badge>
+                                </td>
+                                <td @onclick="() => detailExerciseModal!.Show(exercise)">
+                                    <Badge Color="@(exercise is UserMadeExercise ? BadgeColor.Info : BadgeColor.Secondary)">
+                                        @(exercise is UserMadeExercise ? "Custom" : "Default")
+                                    </Badge>
+                                </td>
+                                <td class="text-end">
+                                    @if (exercise is UserMadeExercise userMadeExercise && userMadeExercise.UserId == userId)
+                                    {
+                                        <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" Class="me-2"
+                                                @onclick="() => ShowEditModal((UserMadeExercise)exercise)">
+                                            <Icon Name="IconName.Pencil"/> Edit
+                                        </Button>
+                                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                                                @onclick="() => DeleteExercise(userMadeExercise.Id)">
+                                            <Icon Name="IconName.Trash"/> Delete
+                                        </Button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-center align-items-center mt-3">
+            <Pagination 
+                ActivePageNumber="currentPage"
+                TotalPages="totalPages"
+                DisplayPages="MaxPagesDisplay"
+                PageChanged="HandlePageChange"
+                Size="PaginationSize.Small"
+                FirstLinkIcon="IconName.ChevronDoubleLeft"
+                PreviousLinkIcon="IconName.ChevronLeft"
+                NextLinkIcon="IconName.ChevronRight"
+                LastLinkIcon="IconName.ChevronDoubleRight" />
+        </div>
+    }
+</div>
+
+<CreateUpdateExerciseModal @ref="exerciseModal"
+              Categories="@categories"
+              OnSave="HandleExerciseSaved" />
+<DetailExerciseModal @ref="detailExerciseModal" />
+
+@code {
+    private bool isLoading = true;
+    private string? userId;
+    private string searchedExerciseName = string.Empty;
+    private int selectedCategoryId;
+    private int selectedDifficulty = -1;
+    private string selectedType = "all";
+    private int currentPage = 1;
+    private int totalPages;
+    private const int MaxExercisesPerPage = 10;
+    private const int MaxPagesDisplay = 3;
+
+    private List<ExerciseCategory> categories = new();
+    private List<ExerciseBase> allExercises = new();
+    private List<ExerciseBase> filteredExercises = new();
+    private List<ExerciseBase> pagedExercises = new();
+    
+    private ConfirmDialog? dialog;
+    private CreateUpdateExerciseModal? exerciseModal;
+    private DetailExerciseModal? detailExerciseModal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
+        await LoadAllExercises();
+        await FilterExercises();
+    }
+
+    private async Task LoadAllExercises()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var exercises = new List<ExerciseBase>();
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var userExercises = await UserMadeExerciseService.GetUserExercisesAsync(userId);
+                exercises.AddRange(userExercises.Cast<ExerciseBase>());
+            }
+
+            var defaultExercises = await DefaultExerciseService.GetAllExercisesAsync();
+            exercises.AddRange(defaultExercises.Cast<ExerciseBase>());
+            
+            // Sort the exercises - custom exercises first, then default ones
+            allExercises = exercises
+                .OrderByDescending(e => e is UserMadeExercise)
+                .ThenBy(e => e.Name)
+                .ToList();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<AutoCompleteDataProviderResult<ExerciseBase>> ExercisesDataProvider(AutoCompleteDataProviderRequest<ExerciseBase> request)
+    {
+        if (allExercises == null || !allExercises.Any())
+        {
+            await LoadAllExercises();
+        }
+
+        return await Task.FromResult(request.ApplyTo(allExercises!));
+    }
+
+    private async Task FilterExercises()
+    {
+        filteredExercises = allExercises.ToList();
+
+        // Apply category filter
+        if (selectedCategoryId != 0)
+        {
+            filteredExercises = filteredExercises
+                .Where(e => (e is DefaultExercise defaultExercise && 
+                           defaultExercise.Categories.Any(c => c.Id == selectedCategoryId)) ||
+                          (e is UserMadeExercise userExercise && 
+                           userExercise.Categories.Any(c => c.Id == selectedCategoryId)))
+                .ToList();
+        }
+
+        // Apply difficulty filter
+        if (selectedDifficulty >= 0)
+        {
+            filteredExercises = filteredExercises
+                .Where(e => (int)e.Difficulty == selectedDifficulty)
+                .ToList();
+        }
+
+        // Apply type filter
+        filteredExercises = selectedType switch
+        {
+            "custom" => filteredExercises.Where(e => e is UserMadeExercise).ToList(),
+            "default" => filteredExercises.Where(e => e is DefaultExercise).ToList(),
+            _ => filteredExercises
+        };
+
+        // Apply search filter
+        if (!string.IsNullOrEmpty(searchedExerciseName))
+        {
+            filteredExercises = filteredExercises
+                .Where(e => e.Name.Contains(searchedExerciseName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        totalPages = (int)Math.Ceiling(filteredExercises.Count / (double)MaxExercisesPerPage);
+        currentPage = 1;
+        await UpdatePagedExercises();
+    }
+
+    private async Task ClearSearchFilter()
+    {
+        searchedExerciseName = string.Empty;
+        await FilterExercises();
+    }
+
+    private async Task ClearCategoryFilter()
+    {
+        selectedCategoryId = 0;
+        await FilterExercises();
+    }
+
+    private async Task ClearDifficultyFilter()
+    {
+        selectedDifficulty = -1;
+        await FilterExercises();
+    }
+
+    private async Task ClearTypeFilter()
+    {
+        selectedType = "all";
+        await FilterExercises();
+    }
+
+    private Task UpdatePagedExercises()
+    {
+        pagedExercises = filteredExercises
+            .Skip((currentPage - 1) * MaxExercisesPerPage)
+            .Take(MaxExercisesPerPage)
+            .ToList();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandlePageChange(int newPage)
+    {
+        currentPage = newPage;
+        await UpdatePagedExercises();
+    }
+
+    private async Task ShowCreateModal()
+    {
+        if (exerciseModal is not null)
+        {
+            await exerciseModal.Show();
+        }
+    }
+
+    private async Task ShowEditModal(UserMadeExercise exercise)
+    {
+        if (exerciseModal is not null)
+        {
+            await exerciseModal.Show(exercise);
+        }
+    }
+
+    private async Task DeleteExercise(int exerciseId)
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        var confirmed = await dialog!.ShowAsync(
+            title: "Delete Exercise", 
+            message1: "Are you sure you want to delete this exercise?"
+        );
+        
+        if (!confirmed) return;
+
+        await UserMadeExerciseService.DeleteUserExerciseAsync(userId, exerciseId);
+        await LoadAllExercises();
+        await FilterExercises();
+    }
+
+    private async Task HandleExerciseSaved()
+    {
+        await LoadAllExercises();
+        await FilterExercises();
+    }
+
+    private static BadgeColor GetDifficultyColor(ExerciseDifficulty difficulty) => difficulty switch
+    {
+        ExerciseDifficulty.Beginner => BadgeColor.Success,
+        ExerciseDifficulty.Novice => BadgeColor.Info,
+        ExerciseDifficulty.Intermediate => BadgeColor.Warning,
+        ExerciseDifficulty.Advanced => BadgeColor.Danger,
+        ExerciseDifficulty.Expert => BadgeColor.Dark,
+        _ => BadgeColor.Secondary
+    };
+}

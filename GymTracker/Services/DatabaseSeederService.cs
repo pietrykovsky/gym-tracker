@@ -63,6 +63,7 @@ public class DatabaseSeederService
                 {
                     Name = exercise.Name,
                     Description = exercise.Description,
+                    Difficulty = exercise.Difficulty,
                     Categories = exercise.Categories.Select(c => categories[c]).ToList()
                 });
             }

@@ -18,6 +18,10 @@ public class DefaultTrainingPlanService : IDefaultTrainingPlanService
         return await context.DefaultTrainingPlans
             .AsNoTracking()
             .Include(p => p.Categories)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Exercise)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Sets)
             .OrderBy(p => p.Name)
             .ToListAsync();
     }
@@ -28,6 +32,10 @@ public class DefaultTrainingPlanService : IDefaultTrainingPlanService
         return await context.DefaultTrainingPlans
             .AsNoTracking()
             .Include(p => p.Categories)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Exercise)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Sets)
             .Where(p => p.Categories.Any(c => c.Id == categoryId))
             .OrderBy(p => p.Name)
             .ToListAsync();
@@ -39,6 +47,10 @@ public class DefaultTrainingPlanService : IDefaultTrainingPlanService
         return await context.DefaultTrainingPlans
             .AsNoTracking()
             .Include(p => p.Categories)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Exercise)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Sets)
             .FirstOrDefaultAsync(p => p.Id == id);
     }
 }

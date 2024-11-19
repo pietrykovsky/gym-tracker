@@ -1,0 +1,293 @@
+﻿@using GymTracker.Data
+@using GymTracker.Services
+@using BlazorBootstrap
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject IUserMadeTrainingPlanService UserTrainingPlanService
+@inject ITrainingPlanCategoryService CategoryService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+@namespace GymTracker.Components.Workouts
+
+<ConfirmDialog @ref="dialog" />
+
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center mt-4 mb-2">
+                <!-- Search -->
+                <div class="flex-grow-1">
+                    <AutoComplete @bind-Value="searchedPlanName"
+                                TItem="UserMadeTrainingPlan"
+                                DataProvider="PlansDataProvider"
+                                PropertyName="Name"
+                                Placeholder="Search training plans..."
+                                OnChanged="FilterPlans" />
+                </div>
+
+                <!-- Filters -->
+                <div class="d-flex gap-3 flex-wrap">
+                    <!-- Category Filter -->
+                    <div class="form-group">
+                        <select class="form-select" @bind="selectedCategoryId" @bind:after="FilterPlans">
+                            <option value="0">All Categories</option>
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category.Id">@category.Name</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Create Button -->
+                    <Button Color="ButtonColor.Primary" @onclick="ShowCreateModal">
+                        <Icon Name="IconName.Plus"/> New Plan
+                    </Button>
+                </div>
+            </div>
+            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center">
+                @if (!string.IsNullOrEmpty(searchedPlanName))
+                {
+                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearSearchFilter">
+                        @searchedPlanName <Icon Name="IconName.X" />
+                    </Badge>
+                }
+                @if (selectedCategoryId > 0)
+                {
+                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearCategoryFilter">
+                        @categories.Find(c => c.Id == selectedCategoryId)?.Name <Icon Name="IconName.X" />
+                    </Badge>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <Spinner />
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Categories</th>
+                        <th>Activities</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!pagedPlans.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center">No training plans found</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var plan in pagedPlans)
+                        {
+                            <tr>
+                                <td @onclick="() => ShowPlanDetails(plan)" style="cursor: pointer;">@plan.Name</td>
+                                <td @onclick="() => ShowPlanDetails(plan)" style="cursor: pointer;">
+                                    @foreach (var category in plan.Categories)
+                                    {
+                                        <Badge Color="BadgeColor.Primary" Class="me-1">@category.Name</Badge>
+                                    }
+                                </td>
+                                <td @onclick="() => ShowPlanDetails(plan)" style="cursor: pointer;">
+                                    @plan.Activities.Count activities
+                                </td>
+                                <td class="text-end">
+                                    <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" Class="me-2"
+                                            @onclick="() => ShowEditModal(plan)">
+                                        <Icon Name="IconName.Pencil"/> Edit
+                                    </Button>
+                                    <Button Color="ButtonColor.Danger" Size="ButtonSize.Small" 
+                                            @onclick="() => DeletePlan(plan.Id)">
+                                        <Icon Name="IconName.Trash"/> Delete
+                                    </Button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="d-flex justify-content-center align-items-center mt-3">
+            <Pagination 
+                ActivePageNumber="currentPage"
+                TotalPages="totalPages"
+                DisplayPages="MaxPagesDisplay"
+                PageChanged="HandlePageChange"
+                Size="PaginationSize.Small"
+                FirstLinkIcon="IconName.ChevronDoubleLeft"
+                PreviousLinkIcon="IconName.ChevronLeft"
+                NextLinkIcon="IconName.ChevronRight"
+                LastLinkIcon="IconName.ChevronDoubleRight" />
+        </div>
+    }
+</div>
+
+<CreateUpdateTrainingPlanModal @ref="planModal" Categories="@categories" OnSave="HandlePlanSaved" />
+<DetailPlanModal @ref="detailPlanModal" />
+
+@code {
+    private bool isLoading = true;
+    private string? userId;
+    private string searchedPlanName = string.Empty;
+    private int selectedCategoryId;
+    private int currentPage = 1;
+    private int totalPages;
+    private const int MaxPlansPerPage = 10;
+    private const int MaxPagesDisplay = 3;
+
+    private List<TrainingPlanCategory> categories = new();
+    private List<UserMadeTrainingPlan> allPlans = new();
+    private List<UserMadeTrainingPlan> filteredPlans = new();
+    private List<UserMadeTrainingPlan> pagedPlans = new();
+    
+    private ConfirmDialog dialog = default!;
+    private CreateUpdateTrainingPlanModal planModal = default!;
+    private DetailPlanModal detailPlanModal = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
+        await LoadAllPlans();
+        await FilterPlans();
+    }
+
+    private async Task LoadAllPlans()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            if (!string.IsNullOrEmpty(userId))
+            {
+                allPlans = (await UserTrainingPlanService.GetUserPlansAsync(userId)).ToList();
+            }
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<AutoCompleteDataProviderResult<UserMadeTrainingPlan>> PlansDataProvider(AutoCompleteDataProviderRequest<UserMadeTrainingPlan> request)
+    {
+        if (allPlans == null || !allPlans.Any())
+        {
+            await LoadAllPlans();
+        }
+
+        return await Task.FromResult(request.ApplyTo(allPlans!));
+    }
+
+    private async Task FilterPlans()
+    {
+        filteredPlans = allPlans.ToList();
+
+        if (selectedCategoryId != 0)
+        {
+            filteredPlans = filteredPlans
+                .Where(p => p.Categories.Any(c => c.Id == selectedCategoryId))
+                .ToList();
+        }
+
+        if (!string.IsNullOrEmpty(searchedPlanName))
+        {
+            filteredPlans = filteredPlans
+                .Where(p => p.Name.Contains(searchedPlanName, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        totalPages = (int)Math.Ceiling(filteredPlans.Count / (double)MaxPlansPerPage);
+        currentPage = 1;
+        await UpdatePagedPlans();
+    }
+
+    private async Task ClearSearchFilter()
+    {
+        searchedPlanName = string.Empty;
+        await FilterPlans();
+    }
+
+    private async Task ClearCategoryFilter()
+    {
+        selectedCategoryId = 0;
+        await FilterPlans();
+    }
+
+    private Task UpdatePagedPlans()
+    {
+        pagedPlans = filteredPlans
+            .Skip((currentPage - 1) * MaxPlansPerPage)
+            .Take(MaxPlansPerPage)
+            .ToList();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task HandlePageChange(int newPage)
+    {
+        currentPage = newPage;
+        await UpdatePagedPlans();
+    }
+
+    private async Task ShowCreateModal()
+    {
+        if (planModal is not null)
+        {
+            await planModal.Show();
+        }
+    }
+
+    private async Task ShowEditModal(UserMadeTrainingPlan plan)
+    {
+        if (planModal is not null)
+        {
+            await planModal.Show(plan);
+        }
+    }
+
+    private async Task ShowPlanDetails(UserMadeTrainingPlan plan)
+    {
+        if (detailPlanModal is not null)
+        {
+            await detailPlanModal.Show(plan);
+        }
+    }
+
+    private async Task DeletePlan(int planId)
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        var confirmed = await dialog!.ShowAsync(
+            title: "Delete Plan",
+            message1: "Are you sure you want to delete this training plan?"
+        );
+        
+        if (!confirmed) return;
+
+        await UserTrainingPlanService.DeleteUserPlanAsync(userId, planId);
+        await LoadAllPlans();
+        await FilterPlans();
+    }
+
+    private async Task HandlePlanSaved()
+    {
+        await LoadAllPlans();
+        await FilterPlans();
+    }
+}

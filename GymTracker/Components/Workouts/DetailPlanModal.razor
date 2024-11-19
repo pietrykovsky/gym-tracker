@@ -1,0 +1,113 @@
+﻿@using GymTracker.Data
+@using GymTracker.Services
+@using BlazorBootstrap
+
+@namespace GymTracker.Components.Workouts
+
+<Modal @ref="modal" Size="ModalSize.Large" Title="Training Plan Details">
+    <BodyTemplate>
+        @if (plan != null)
+        {
+            <div class="row g-3">
+                <div class="col-12">
+                    <h4>@plan.Name</h4>
+                    @if (!string.IsNullOrWhiteSpace(plan.Description))
+                    {
+                        <p class="text-muted">@plan.Description</p>
+                    }
+                </div>
+
+                <div class="col-12">
+                    <h6 class="text-muted mb-2">Categories</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var category in GetCategories())
+                        {
+                            <Badge Color="BadgeColor.Primary">@category.Name</Badge>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <h5 class="mb-3">Workout Structure</h5>
+                    <div class="list-group">
+                        @foreach (var activity in GetActivities())
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-1">@activity.Exercise.Name</h6>
+                                    <span class="badge bg-primary rounded-pill">
+                                        @activity.Sets.Count @(activity.Sets.Count == 1 ? "set" : "sets")
+                                    </span>
+                                </div>
+                                <div class="mt-2">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Set</th>
+                                                    <th>Reps</th>
+                                                    <th>Weight</th>
+                                                    <th>Rest</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var set in activity.Sets.OrderBy(s => s.Order))
+                                                {
+                                                    <tr>
+                                                        <td>@set.Order</td>
+                                                        <td>@(set.Repetitions > 0 ? set.Repetitions.ToString() : "Until failure")</td>
+                                                        <td>@(set.Weight.HasValue ? $"{set.Weight}kg" : "-")</td>
+                                                        <td>@(set.RestAfterDuration.HasValue ? $"{set.RestAfterDuration}s" : "-")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </BodyTemplate>
+</Modal>
+
+@code {
+    private Modal modal = default!;
+    private DefaultTrainingPlan? defaultPlan;
+    private UserMadeTrainingPlan? userPlan;
+    private TrainingPlanBase? plan => (TrainingPlanBase?)defaultPlan ?? userPlan;
+
+    public async Task Show(DefaultTrainingPlan plan)
+    {
+        this.defaultPlan = plan;
+        this.userPlan = null;
+        await modal.ShowAsync();
+    }
+
+    public async Task Show(UserMadeTrainingPlan plan)
+    {
+        this.userPlan = plan;
+        this.defaultPlan = null;
+        await modal.ShowAsync();
+    }
+
+    private IEnumerable<TrainingPlanCategory> GetCategories()
+    {
+        if (defaultPlan != null)
+            return defaultPlan.Categories;
+        if (userPlan != null)
+            return userPlan.Categories;
+        return Enumerable.Empty<TrainingPlanCategory>();
+    }
+
+    private IEnumerable<PlanActivity> GetActivities()
+    {
+        if (defaultPlan != null)
+            return defaultPlan.Activities.OrderBy(a => a.Order);
+        if (userPlan != null)
+            return userPlan.Activities.OrderBy(a => a.Order);
+        return Enumerable.Empty<PlanActivity>();
+    }
+}

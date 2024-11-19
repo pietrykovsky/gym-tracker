@@ -77,7 +77,6 @@
                         <th>Name</th>
                         <th>Categories</th>
                         <th>Activities</th>
-                        <th>Description</th>
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
@@ -103,7 +102,6 @@
                                 <td @onclick="() => ShowPlanDetails(plan)" style="cursor: pointer;">
                                     @plan.Activities.Count activities
                                 </td>
-                                <td @onclick="() => ShowPlanDetails(plan)" style="cursor: pointer;">@plan.Description</td>
                                 <td class="text-end">
                                     <Button Color="ButtonColor.Primary" Size="ButtonSize.Small" Class="me-2"
                                             @onclick="() => ShowEditModal(plan)">

@@ -10,7 +10,7 @@
 
 @namespace GymTracker.Components.Workouts
 
-<Modal @ref="modal" Size="ModalSize.Large" Title="@(IsEdit ? "Edit Exercise" : "Create Exercise")">
+<Modal @ref="modal" Size="ModalSize.Large" Title="@(IsEdit ? "Edit Exercise" : "Create Exercise")" IsVerticallyCentered="true" IsScrollable="true">
     <BodyTemplate>
         <EditForm Model="@exercise" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />

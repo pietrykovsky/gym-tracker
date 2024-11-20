@@ -31,9 +31,9 @@ public class TrainingActivityService : ITrainingActivityService
             .AsNoTracking()
             .Include(a => a.Exercise)
             .Include(a => a.Sets)
-            .FirstOrDefaultAsync(a => 
-                a.TrainingSession.UserId == userId && 
-                a.TrainingSessionId == sessionId && 
+            .FirstOrDefaultAsync(a =>
+                a.TrainingSession.UserId == userId &&
+                a.TrainingSessionId == sessionId &&
                 a.Id == activityId);
     }
 
@@ -84,9 +84,9 @@ public class TrainingActivityService : ITrainingActivityService
 
         var activity = await context.TrainingActivities
             .Include(a => a.Sets)
-            .FirstOrDefaultAsync(a => 
-                a.TrainingSession.UserId == userId && 
-                a.TrainingSessionId == sessionId && 
+            .FirstOrDefaultAsync(a =>
+                a.TrainingSession.UserId == userId &&
+                a.TrainingSessionId == sessionId &&
                 a.Id == activityId);
 
         if (activity == null)
@@ -131,9 +131,9 @@ public class TrainingActivityService : ITrainingActivityService
         using var context = await _contextFactory.CreateDbContextAsync();
 
         var activity = await context.TrainingActivities
-            .FirstOrDefaultAsync(a => 
-                a.TrainingSession.UserId == userId && 
-                a.TrainingSessionId == sessionId && 
+            .FirstOrDefaultAsync(a =>
+                a.TrainingSession.UserId == userId &&
+                a.TrainingSessionId == sessionId &&
                 a.Id == activityId);
 
         if (activity == null)
@@ -157,8 +157,8 @@ public class TrainingActivityService : ITrainingActivityService
     }
 
     public async Task<bool> UpdateActivitiesOrderAsync(
-        string userId, 
-        int sessionId, 
+        string userId,
+        int sessionId,
         IEnumerable<(int ActivityId, int NewOrder)> newOrders)
     {
         using var context = await _contextFactory.CreateDbContextAsync();

@@ -37,8 +37,7 @@ public class TrainingActivityService : ITrainingActivityService
                 a.Id == activityId);
     }
 
-    public async Task<TrainingActivity> CreateActivityAsync(
-        string userId, int sessionId, TrainingActivity activity)
+    public async Task<TrainingActivity> CreateActivityAsync(string userId, int sessionId, TrainingActivity activity)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
 
@@ -57,10 +56,25 @@ public class TrainingActivityService : ITrainingActivityService
         activity.Order = maxOrder + 1;
         activity.TrainingSessionId = sessionId;
 
+        // Ensure sets are properly ordered
+        var setOrder = 1;
+        foreach (var set in activity.Sets.OrderBy(s => s.Order))
+        {
+            set.Order = setOrder++;
+        }
+
         await context.TrainingActivities.AddAsync(activity);
         await context.SaveChangesAsync();
 
-        return activity;
+        // Detach the entity to avoid tracking issues
+        context.Entry(activity).State = EntityState.Detached;
+
+        // Load related data for return
+        return await context.TrainingActivities
+            .AsNoTracking()
+            .Include(a => a.Exercise)
+            .Include(a => a.Sets)
+            .FirstAsync(a => a.Id == activity.Id);
     }
 
     public async Task<TrainingActivity?> UpdateActivityAsync(
@@ -78,18 +92,38 @@ public class TrainingActivityService : ITrainingActivityService
         if (activity == null)
             return null;
 
-        activity.ExerciseId = updatedActivity.ExerciseId;
-        activity.Order = updatedActivity.Order;
+        // Preserve existing order
+        var originalOrder = activity.Order;
 
-        // Update sets
+        activity.ExerciseId = updatedActivity.ExerciseId;
+        activity.Order = originalOrder; // Ensure order is preserved
+
+        // Update sets with proper ordering
         activity.Sets.Clear();
-        foreach (var set in updatedActivity.Sets)
+        var setOrder = 1;
+        foreach (var set in updatedActivity.Sets.OrderBy(s => s.Order))
         {
-            activity.Sets.Add(set);
+            var newSet = new ExerciseSet
+            {
+                Order = setOrder++,
+                Repetitions = set.Repetitions,
+                Weight = set.Weight,
+                RestAfterDuration = set.RestAfterDuration
+            };
+            activity.Sets.Add(newSet);
         }
 
         await context.SaveChangesAsync();
-        return activity;
+
+        // Detach the entity to avoid tracking issues
+        context.Entry(activity).State = EntityState.Detached;
+
+        // Load fresh data for return
+        return await context.TrainingActivities
+            .AsNoTracking()
+            .Include(a => a.Exercise)
+            .Include(a => a.Sets)
+            .FirstAsync(a => a.Id == activity.Id);
     }
 
     public async Task<bool> DeleteActivityAsync(string userId, int sessionId, int activityId)

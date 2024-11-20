@@ -6,6 +6,7 @@
 @using System.Security.Claims
 
 @inject IBodyMeasurementService MeasurementService
+@inject ITrainingSessionService TrainingSessionService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Home</PageTitle>
@@ -15,18 +16,22 @@
     <Calendar 
         @bind-SelectedDate="selectedDate" 
         OnSelectedDateChanged="HandleDateChanged"
-        DatesWithMeasurements="datesWithMeasurementCounts" />
+        DatesWithMeasurements="datesWithMeasurementCounts"
+        DatesWithSessions="datesWithSessionCounts" />
     <CreateSection 
         SelectedDate="selectedDate"
-        OnMeasurementAdded="HandleMeasurementAdded" />
+        OnMeasurementAdded="HandleMeasurementAdded"
+        OnSessionCreated="HandleSessionCreated" />
 </div>
 <EventList 
     SelectedDate="selectedDate" 
-    OnMeasurementsChanged="HandleMeasurementAdded" />
+    OnMeasurementsChanged="HandleMeasurementAdded"
+    OnSessionsChanged="HandleSessionCreated" />
 
 @code {
     private DateOnly? selectedDate = DateOnly.FromDateTime(DateTime.Today);
     private Dictionary<DateOnly, int> datesWithMeasurementCounts = new();
+    private Dictionary<DateOnly, int> datesWithSessionCounts = new();
     private string? userId;
 
     protected override async Task OnInitializedAsync()
@@ -36,25 +41,27 @@
         
         if (!string.IsNullOrEmpty(userId))
         {
-            await LoadMonthMeasurements();
+            await LoadMonthEvents();
         }
     }
 
-    private async Task LoadMonthMeasurements()
+    private async Task LoadMonthEvents()
     {
         if (selectedDate.HasValue && !string.IsNullOrEmpty(userId))
         {
             var startDate = new DateOnly(selectedDate.Value.Year, selectedDate.Value.Month, 1);
             var endDate = startDate.AddMonths(1).AddDays(-1);
             
-            var monthMeasurements = await MeasurementService.GetMeasurementsInRangeAsync(
-                userId,
-                startDate,
-                endDate
-            );
-
+            var monthMeasurements = await MeasurementService
+                .GetMeasurementsInRangeAsync(userId, startDate, endDate);
             datesWithMeasurementCounts = monthMeasurements
                 .GroupBy(m => m.Date)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var monthSessions = await TrainingSessionService
+                .GetSessionsInRangeAsync(userId, startDate, endDate);
+            datesWithSessionCounts = monthSessions
+                .GroupBy(s => s.Date)
                 .ToDictionary(g => g.Key, g => g.Count());
 
             StateHasChanged();
@@ -66,12 +73,17 @@
         selectedDate = newDate;
         if (selectedDate?.Month != newDate?.Month)
         {
-            await LoadMonthMeasurements();
+            await LoadMonthEvents();
         }
     }
 
     private async Task HandleMeasurementAdded()
     {
-        await LoadMonthMeasurements();
+        await LoadMonthEvents();
+    }
+
+    private async Task HandleSessionCreated()
+    {
+        await LoadMonthEvents();
     }
 }

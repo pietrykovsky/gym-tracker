@@ -53,23 +53,126 @@ public class TrainingSessionService : ITrainingSessionService
             .ToListAsync();
     }
 
-    public async Task<TrainingSession> CreateFromPlanAsync(
-        string userId, int planId, DateOnly date, string? notes = null)
+    public async Task<TrainingSession> CreateCustomSessionAsync(string userId, TrainingSession session)
+    {
+        // Validate session
+        ValidateSession(session);
+
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Create new session without activities
+        var newSession = new TrainingSession
+        {
+            UserId = userId,
+            Date = session.Date,
+            Notes = session.Notes
+        };
+
+        await context.TrainingSessions.AddAsync(newSession);
+        await context.SaveChangesAsync();
+
+        // Filter and add valid activities only
+        var validActivities = session.Activities
+            .Where(a => a.ExerciseId > 0 && a.Sets.Count != 0)
+            .OrderBy(a => a.Order)
+            .ToList();
+
+        var activityOrder = 1;
+        foreach (var activity in validActivities)
+        {
+            var newActivity = new TrainingActivity
+            {
+                TrainingSessionId = newSession.Id,
+                Order = activityOrder++,
+                ExerciseId = activity.ExerciseId
+            };
+
+            await context.TrainingActivities.AddAsync(newActivity);
+            await context.SaveChangesAsync();
+
+            // Add sets with proper ordering
+            var setOrder = 1;
+            foreach (var set in activity.Sets.OrderBy(s => s.Order))
+            {
+                var newSet = new ExerciseSet
+                {
+                    ActivityId = newActivity.Id,
+                    Order = setOrder++,
+                    Repetitions = set.Repetitions,
+                    Weight = set.Weight,
+                    RestAfterDuration = set.RestAfterDuration
+                };
+
+                await context.ExerciseSets.AddAsync(newSet);
+            }
+
+            await context.SaveChangesAsync();
+        }
+
+        // Load and return the complete session
+        return await context.TrainingSessions
+            .Include(s => s.Activities.OrderBy(a => a.Order))
+                .ThenInclude(a => a.Exercise)
+            .Include(s => s.Activities)
+                .ThenInclude(a => a.Sets.OrderBy(s => s.Order))
+            .FirstAsync(s => s.Id == newSession.Id);
+    }
+
+    private static void ValidateSession(TrainingSession session)
+    {
+        // Check for valid activities
+        var validActivities = session.Activities
+            .Where(a => a.ExerciseId > 0 && a.Sets.Count != 0)
+            .ToList();
+
+        if (validActivities.Count == 0)
+        {
+            throw new ArgumentException("Training session must have at least one activity with an exercise and sets.");
+        }
+    }
+
+    public async Task<TrainingSession> CreateFromPlanAsync(string userId, int planId, DateOnly date, string? notes = null)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
 
-        // Get the plan with all activities and sets
-        var plan = await context.DefaultTrainingPlans
+        // First try to find a default plan
+        var defaultPlan = await context.DefaultTrainingPlans
             .Include(p => p.Activities)
                 .ThenInclude(a => a.Sets)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Exercise)
             .FirstOrDefaultAsync(p => p.Id == planId);
 
-        if (plan == null)
+        if (defaultPlan != null)
         {
-            throw new ArgumentException("Invalid plan ID");
+            return await CreateSessionFromPlan(userId, defaultPlan, date, notes);
         }
 
-        // Create new session
+        // If not found, try to find a user-made plan
+        var userPlan = await context.UserMadeTrainingPlans
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Sets)
+            .Include(p => p.Activities)
+                .ThenInclude(a => a.Exercise)
+            .FirstOrDefaultAsync(p => p.Id == planId && p.UserId == userId);
+
+        if (userPlan != null)
+        {
+            return await CreateSessionFromPlan(userId, userPlan, date, notes);
+        }
+
+        throw new ArgumentException("Invalid plan ID");
+    }
+
+    private async Task<TrainingSession> CreateSessionFromPlan(
+        string userId,
+        TrainingPlanBase plan,
+        DateOnly date,
+        string? notes)
+    {
+        using var context = await _contextFactory.CreateDbContextAsync();
+
+        // Create session first
         var session = new TrainingSession
         {
             UserId = userId,
@@ -77,67 +180,46 @@ public class TrainingSessionService : ITrainingSessionService
             Notes = notes
         };
 
-        // Copy activities and sets from plan
+        await context.TrainingSessions.AddAsync(session);
+        await context.SaveChangesAsync();
+
+        // Add activities one by one
         foreach (var planActivity in plan.Activities.OrderBy(a => a.Order))
         {
             var activity = new TrainingActivity
             {
+                TrainingSessionId = session.Id,
                 Order = planActivity.Order,
                 ExerciseId = planActivity.ExerciseId
             };
 
+            await context.TrainingActivities.AddAsync(activity);
+            await context.SaveChangesAsync();
+
+            // Add sets for this activity
             foreach (var planSet in planActivity.Sets.OrderBy(s => s.Order))
             {
-                activity.Sets.Add(new ExerciseSet
+                var set = new ExerciseSet
                 {
+                    ActivityId = activity.Id,
                     Order = planSet.Order,
                     Repetitions = planSet.Repetitions,
                     Weight = planSet.Weight,
                     RestAfterDuration = planSet.RestAfterDuration
-                });
-            }
+                };
 
-            session.Activities.Add(activity);
+                await context.ExerciseSets.AddAsync(set);
+            }
+            await context.SaveChangesAsync();
         }
 
-        await context.TrainingSessions.AddAsync(session);
-        await context.SaveChangesAsync();
-
-        return session;
-    }
-
-    public async Task<TrainingSession> CreateCustomSessionAsync(string userId, TrainingSession session)
-    {
-        if (session.Activities.Count == 0)
-        {
-            throw new ArgumentException("Session must have at least one activity");
-        }
-
-        using var context = await _contextFactory.CreateDbContextAsync();
-        session.UserId = userId;
-
-        // Ensure proper ordering
-        var order = 1;
-        foreach (var activity in session.Activities)
-        {
-            activity.Order = order++;
-
-            if (activity.Sets.Count == 0)
-            {
-                throw new ArgumentException($"Activity {activity.Exercise?.Name ?? "Unknown"} must have at least one set");
-            }
-
-            var setOrder = 1;
-            foreach (var set in activity.Sets)
-            {
-                set.Order = setOrder++;
-            }
-        }
-
-        await context.TrainingSessions.AddAsync(session);
-        await context.SaveChangesAsync();
-
-        return session;
+        // Load and return the complete session
+        return await context.TrainingSessions
+            .Include(s => s.Activities)
+                .ThenInclude(a => a.Exercise)
+            .Include(s => s.Activities)
+                .ThenInclude(a => a.Sets)
+            .FirstAsync(s => s.Id == session.Id);
     }
 
     public async Task<TrainingSession?> UpdateSessionAsync(

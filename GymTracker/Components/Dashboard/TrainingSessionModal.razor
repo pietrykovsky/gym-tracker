@@ -1,0 +1,302 @@
+﻿@using GymTracker.Data
+@using GymTracker.Services
+@using System.Security.Claims
+@using BlazorBootstrap
+
+@namespace GymTracker.Components.Dashboard
+
+@inject IDefaultTrainingPlanService DefaultTrainingPlanService
+@inject IUserMadeTrainingPlanService UserTrainingPlanService
+@inject ITrainingSessionService TrainingSessionService
+@inject ITrainingPlanCategoryService CategoryService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+<Modal @ref="modal" Title="Start Training Session" UseStaticBackdrop="true" CloseOnEscape="false">
+    <BodyTemplate>
+        @if (currentStep == SessionStep.Initial)
+        {
+            <div class="d-grid gap-3">
+                <button class="btn btn-outline-primary text-start p-3" @onclick="() => SetStep(SessionStep.PlanSelect)">
+                    <h6 class="mb-1">Use Training Plan</h6>
+                    <small class="text-muted">Start from an existing workout template</small>
+                </button>
+
+                <button class="btn btn-outline-primary text-start p-3" @onclick="StartCustomSession">
+                    <h6 class="mb-1">Custom Session</h6>
+                    <small class="text-muted">Create a workout from scratch</small>
+                </button>
+            </div>
+        }
+        else if (currentStep == SessionStep.PlanSelect)
+        {
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Plan Type</label>
+                    <select class="form-select" @bind="selectedPlanType" @bind:after="LoadPlans">
+                        <option value="default">Default Plans</option>
+                        <option value="custom">My Plans</option>
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" @bind="selectedCategoryId" @bind:after="FilterPlans">
+                        <option value="0">All Categories</option>
+                        @foreach (var category in categories)
+                        {
+                            <option value="@category.Id">@category.Name</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    @if (isLoading)
+                    {
+                        <div class="text-center p-3">
+                            <Spinner />
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="list-group">
+                            @foreach (var plan in filteredPlans)
+                            {
+                                <button class="list-group-item list-group-item-action" @onclick="() => SelectPlan(plan)">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">@plan.Name</h6>
+                                            <small>
+                                                @foreach (var category in GetPlanCategories(plan))
+                                                {
+                                                    <Badge Color="BadgeColor.Primary" Class="me-1">@category.Name</Badge>
+                                                }
+                                            </small>
+                                        </div>
+                                        <Badge Color="BadgeColor.Secondary">
+                                            @plan.Activities.Count exercises
+                                        </Badge>
+                                    </div>
+                                </button>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <Button Color="ButtonColor.Secondary" @onclick="() => SetStep(SessionStep.Initial)">Back</Button>
+                <Button Color="ButtonColor.Primary" 
+                        Disabled="@(selectedPlan is null)"
+                        @onclick="StartFromPlan">
+                    Continue
+                </Button>
+            </div>
+        }
+        else if (currentStep == SessionStep.SessionEdit)
+        {
+            <TrainingSessionEditor 
+                Session="currentSession"
+                OnSave="HandleSessionSaved"
+                OnCancel="HandleCancel" />
+        }
+    </BodyTemplate>
+</Modal>
+
+@code {
+    private enum SessionStep
+    {
+        Initial,
+        PlanSelect,
+        SessionEdit
+    }
+    [Parameter]
+    public bool IsEdit { get; set; } = false;
+
+    [Parameter]
+    public DateOnly? SelectedDate { get; set; }
+
+    [Parameter]
+    public Func<TrainingSession, Task> OnSessionSaved { get; set; } = default!;
+
+    [Parameter]
+    public TrainingSession? ExistingSession { get; set; }
+
+    [Parameter]
+    public EventCallback OnSessionCreated { get; set; }
+
+    private Modal modal = default!;
+    private SessionStep currentStep = SessionStep.Initial;
+    private string? userId;
+    private bool isLoading;
+    private string selectedPlanType = "default";
+    private int selectedCategoryId;
+    private List<TrainingPlanCategory> categories = [];
+    private List<TrainingPlanBase> allPlans = [];
+    private List<TrainingPlanBase> filteredPlans = [];
+    private TrainingPlanBase? selectedPlan;
+    private TrainingSession? currentSession;
+
+    private IEnumerable<TrainingPlanCategory> GetPlanCategories(TrainingPlanBase plan) =>
+        plan switch
+        {
+            DefaultTrainingPlan defaultPlan => defaultPlan.Categories,
+            UserMadeTrainingPlan userPlan => userPlan.Categories,
+            _ => Enumerable.Empty<TrainingPlanCategory>()
+        };
+
+    private bool PlanHasCategory(TrainingPlanBase plan, int categoryId) =>
+        plan switch
+        {
+            DefaultTrainingPlan defaultPlan => defaultPlan.Categories.Any(c => c.Id == categoryId),
+            UserMadeTrainingPlan userPlan => userPlan.Categories.Any(c => c.Id == categoryId),
+            _ => false
+        };
+
+    public async Task Show()
+    {
+        await Reset();
+        await modal.ShowAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        if (!string.IsNullOrEmpty(userId))
+        {
+            categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
+            await LoadPlans();
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (IsEdit && ExistingSession != null)
+        {
+            currentSession = ExistingSession;
+            SetStep(SessionStep.SessionEdit);
+        }
+    }
+
+    private async Task Reset()
+    {
+        currentStep = SessionStep.Initial;
+        selectedPlan = null;
+        currentSession = null;
+        await LoadPlans();
+    }
+
+    private void SetStep(SessionStep step)
+    {
+        currentStep = step;
+        StateHasChanged();
+    }
+
+    private async Task HandleCancel()
+    {
+        if (IsEdit)
+        {
+            await modal.HideAsync();
+        }
+        else
+        {
+            SetStep(SessionStep.Initial);
+        }
+    }
+
+    private async Task LoadPlans()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            allPlans.Clear();
+            
+            if (selectedPlanType == "default")
+            {
+                var defaultPlans = await DefaultTrainingPlanService.GetAllPlansAsync();
+                allPlans.AddRange(defaultPlans);
+            }
+            else
+            {
+                var userPlans = await UserTrainingPlanService.GetUserPlansAsync(userId);
+                allPlans.AddRange(userPlans);
+            }
+
+            await FilterPlans();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private Task FilterPlans()
+    {
+        filteredPlans = allPlans;
+
+        if (selectedCategoryId > 0)
+        {
+            filteredPlans = filteredPlans
+                .Where(p => PlanHasCategory(p, selectedCategoryId))
+                .ToList();
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void SelectPlan(TrainingPlanBase plan)
+    {
+        selectedPlan = plan;
+        StateHasChanged();
+    }
+
+    private async Task StartFromPlan()
+    {
+        if (selectedPlan is null || !SelectedDate.HasValue || string.IsNullOrEmpty(userId))
+            return;
+
+        currentSession = await TrainingSessionService.CreateFromPlanAsync(
+            userId, selectedPlan.Id, SelectedDate.Value);
+        SetStep(SessionStep.SessionEdit);
+    }
+
+    private void StartCustomSession()
+    {
+        if (!SelectedDate.HasValue || string.IsNullOrEmpty(userId))
+            return;
+
+        currentSession = new TrainingSession
+        {
+            UserId = userId,
+            Date = SelectedDate.Value
+        };
+
+        SetStep(SessionStep.SessionEdit);
+    }
+
+    private async Task HandleSessionSaved()
+    {
+        if (string.IsNullOrEmpty(userId) || currentSession is null)
+        {
+            return;
+        }
+
+        if (IsEdit)
+        {
+            await OnSessionSaved.Invoke(currentSession!);
+        }
+        else
+        {
+            await OnSessionCreated.InvokeAsync();
+        }
+        await modal.HideAsync();
+        NavigationManager.NavigateTo("/", true); 
+    }
+}

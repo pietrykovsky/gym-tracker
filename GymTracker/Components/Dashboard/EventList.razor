@@ -3,6 +3,7 @@
 @using GymTracker.Data
 
 @inject IBodyMeasurementService MeasurementService
+@inject ITrainingSessionService TrainingSessionService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IJSRuntime JSRuntime
 
@@ -19,21 +20,31 @@
             </div>
         </div>
     }
-    else if (!measurementList.Any())
+    else if (!measurementList.Any() && !sessionList.Any())
     {
         <div class="text-muted">No measurements recorded for this date</div>
     }
     else
     {
-        <div class="accordion" id="measurementsAccordion">
+        <div class="accordion" id="eventsAccordion">
             @foreach (var measurement in measurementList)
             {
                 <BodyMeasurementItem 
                     Measurement="measurement"
                     IsExpanded="expandedMeasurementId == measurement.Id"
                     OnToggleRequested="ToggleMeasurement"
-                    OnEditRequested="HandleEdit"
+                    OnEditRequested="HandleMeasurementEdit"
                     OnDeleteRequested="DeleteMeasurement" />
+            }
+
+            @foreach (var session in sessionList)
+            {
+                <TrainingSessionItem
+                    Session="session"
+                    IsExpanded="expandedSessionId == session.Id"
+                    OnToggleRequested="ToggleSession"
+                    OnEditRequested="HandleSessionEdit"
+                    OnDeleteRequested="DeleteSession" />
             }
         </div>
     }
@@ -46,10 +57,15 @@
     [Parameter]
     public EventCallback OnMeasurementsChanged { get; set; }
 
+    [Parameter]
+    public EventCallback OnSessionsChanged { get; set; }
+
     private bool _isLoading;
     private string? userId;
     private List<BodyMeasurement> measurementList = new();
+    private List<TrainingSession> sessionList = new();
     private int? expandedMeasurementId;
+    private int? expandedSessionId;
     private readonly SemaphoreSlim _loadingSemaphore = new(1, 1);
 
     protected override async Task OnInitializedAsync()
@@ -59,7 +75,7 @@
         
         if (!string.IsNullOrEmpty(userId))
         {
-            await LoadMeasurements();
+            await LoadEvents();
         }
     }
 
@@ -67,11 +83,11 @@
     {
         if (SelectedDate.HasValue && !string.IsNullOrEmpty(userId))
         {
-            await LoadMeasurements();
+            await LoadEvents();
         }
     }
 
-    private async Task LoadMeasurements()
+    private async Task LoadEvents()
     {
         if (_isLoading || !SelectedDate.HasValue || string.IsNullOrEmpty(userId))
         {
@@ -89,6 +105,13 @@
                 SelectedDate.Value
             );
             measurementList = measurements.ToList();
+
+            var sessions = await TrainingSessionService.GetSessionsInRangeAsync(
+                userId,
+                SelectedDate.Value,
+                SelectedDate.Value
+            );
+            sessionList = sessions.ToList();
         }
         finally
         {
@@ -106,15 +129,32 @@
     private void ToggleMeasurement(int measurementId)
     {
         expandedMeasurementId = expandedMeasurementId == measurementId ? null : measurementId;
+        expandedSessionId = null;
     }
 
-    private async Task HandleEdit(BodyMeasurement measurement)
+    private void ToggleSession(int sessionId)
+    {
+        expandedSessionId = expandedSessionId == sessionId ? null : sessionId;
+        expandedMeasurementId = null;
+    }
+
+    private async Task HandleMeasurementEdit(BodyMeasurement measurement)
     {
         if (!string.IsNullOrEmpty(userId))
         {
             await MeasurementService.UpdateMeasurementAsync(userId, measurement.Id, measurement);
-            await LoadMeasurements();
+            await LoadEvents();
             await OnMeasurementsChanged.InvokeAsync();
+        }
+    }
+
+    private async Task HandleSessionEdit(TrainingSession session)
+    {
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await TrainingSessionService.UpdateSessionAsync(userId, session.Id, session);
+            await LoadEvents();
+            await OnSessionsChanged.InvokeAsync();
         }
     }
 
@@ -122,12 +162,28 @@
     {
         if (!string.IsNullOrEmpty(userId))
         {
-            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this measurement?");
+            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+                "Are you sure you want to delete this measurement?");
             if (confirmed)
             {
                 await MeasurementService.DeleteMeasurementAsync(userId, measurement.Id);
-                await LoadMeasurements();
+                await LoadEvents();
                 await OnMeasurementsChanged.InvokeAsync();
+            }
+        }
+    }
+
+    private async Task DeleteSession(TrainingSession session)
+    {
+        if (!string.IsNullOrEmpty(userId))
+        {
+            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+                "Are you sure you want to delete this training session?");
+            if (confirmed)
+            {
+                await TrainingSessionService.DeleteSessionAsync(userId, session.Id);
+                await LoadEvents();
+                await OnSessionsChanged.InvokeAsync();
             }
         }
     }

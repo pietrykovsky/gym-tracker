@@ -15,7 +15,7 @@ public class PlanActivityService : IPlanActivityService
     public async Task<IEnumerable<PlanActivity>> GetPlanActivitiesAsync(int planId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.TrainingActivities
+        return await context.PlanActivities
             .AsNoTracking()
             .Include(a => a.Exercise)
             .Include(a => a.Sets)
@@ -27,7 +27,7 @@ public class PlanActivityService : IPlanActivityService
     public async Task<PlanActivity?> GetActivityByIdAsync(int planId, int activityId)
     {
         using var context = await _contextFactory.CreateDbContextAsync();
-        return await context.TrainingActivities
+        return await context.PlanActivities
             .AsNoTracking()
             .Include(a => a.Exercise)
             .Include(a => a.Sets)
@@ -39,13 +39,13 @@ public class PlanActivityService : IPlanActivityService
         using var context = await _contextFactory.CreateDbContextAsync();
 
         // Get the highest current order and add 1
-        var maxOrder = await context.TrainingActivities
+        var maxOrder = await context.PlanActivities
             .Where(a => a.PlanId == activity.PlanId)
             .MaxAsync(a => (int?)a.Order) ?? 0;
 
         activity.Order = maxOrder + 1;
 
-        await context.TrainingActivities.AddAsync(activity);
+        await context.PlanActivities.AddAsync(activity);
         await context.SaveChangesAsync();
 
         return activity;
@@ -55,7 +55,7 @@ public class PlanActivityService : IPlanActivityService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
 
-        var activity = await context.TrainingActivities
+        var activity = await context.PlanActivities
             .Include(a => a.Sets)
             .FirstOrDefaultAsync(a => a.PlanId == planId && a.Id == activityId);
 
@@ -83,17 +83,17 @@ public class PlanActivityService : IPlanActivityService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
 
-        var activity = await context.TrainingActivities
+        var activity = await context.PlanActivities
             .FirstOrDefaultAsync(a => a.PlanId == planId && a.Id == activityId);
 
         if (activity == null)
             return false;
 
-        context.TrainingActivities.Remove(activity);
+        context.PlanActivities.Remove(activity);
         await context.SaveChangesAsync();
 
         // Reorder remaining activities
-        var remainingActivities = await context.TrainingActivities
+        var remainingActivities = await context.PlanActivities
             .Where(a => a.PlanId == planId && a.Order > activity.Order)
             .ToListAsync();
 
@@ -110,7 +110,7 @@ public class PlanActivityService : IPlanActivityService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
 
-        var activities = await context.TrainingActivities
+        var activities = await context.PlanActivities
             .Where(a => a.PlanId == planId)
             .ToListAsync();
 

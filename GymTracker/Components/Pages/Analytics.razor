@@ -1,0 +1,58 @@
+﻿@page "/analytics"
+@rendermode InteractiveServer
+
+@using System.Security.Claims
+@using BlazorBootstrap
+@using GymTracker.Services
+@using GymTracker.Components.Analytics
+
+@inject IAnalyticsService AnalyticsService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Analytics</PageTitle>
+
+<div class="container-fluid">
+    <h3>Analytics</h3>
+
+    <DateRangeSelector 
+        StartDate="startDate" 
+        EndDate="endDate" 
+        OnDateRangeChanged="HandleDateRangeChanged" />
+
+    <Tabs EnableFadeEffect="true" NavStyle="NavStyle.Pills">
+        <Tab Title="Exercise Analytics" Active="true">
+            <Content>
+                <ExerciseAnalytics 
+                    StartDate="startDate"
+                    EndDate="endDate"
+                    UserId="@userId" />
+            </Content>
+        </Tab>
+        <Tab Title="Body Measurements">
+            <Content>
+                <BodyAnalytics
+                    StartDate="startDate"
+                    EndDate="endDate"
+                    UserId="@userId" />
+            </Content>
+        </Tab>
+    </Tabs>
+</div>
+
+@code {
+    private string? userId;
+    private DateTime startDate = DateTime.Today.AddMonths(-1);
+    private DateTime endDate = DateTime.Today;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    private void HandleDateRangeChanged((DateTime start, DateTime end) range)
+    {
+        startDate = range.start;
+        endDate = range.end;
+    }
+}

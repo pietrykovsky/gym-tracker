@@ -1,0 +1,49 @@
+﻿@namespace GymTracker.Components.Analytics
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="form-floating my-1">
+            <input type="date" class="form-control" 
+                   value="@StartDate.ToString("yyyy-MM-dd")"
+                   @onchange="HandleStartDateChanged" />
+            <label>Start Date</label>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="form-floating mt-1">
+            <input type="date" class="form-control" 
+                   value="@EndDate.ToString("yyyy-MM-dd")"
+                   @onchange="HandleEndDateChanged" />
+            <label>End Date</label>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public DateTime StartDate { get; set; }
+
+    [Parameter]
+    public DateTime EndDate { get; set; }
+
+    [Parameter]
+    public EventCallback<(DateTime start, DateTime end)> OnDateRangeChanged { get; set; }
+
+    private async Task HandleStartDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var date))
+        {
+            StartDate = date;
+            await OnDateRangeChanged.InvokeAsync((StartDate, EndDate));
+        }
+    }
+
+    private async Task HandleEndDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var date))
+        {
+            EndDate = date;
+            await OnDateRangeChanged.InvokeAsync((StartDate, EndDate));
+        }
+    }
+}

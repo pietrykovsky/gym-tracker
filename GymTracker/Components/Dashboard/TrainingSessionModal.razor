@@ -134,6 +134,8 @@
     private List<TrainingPlanCategory> categories = [];
     private List<TrainingPlanBase> allPlans = [];
     private List<TrainingPlanBase> filteredPlans = [];
+    private List<DefaultTrainingPlan> defaultTrainingPlans = [];
+    private List<UserMadeTrainingPlan> userTrainingPlans = [];
     private TrainingPlanBase? selectedPlan;
     private TrainingSession? currentSession;
 
@@ -169,6 +171,9 @@
             categories = (await CategoryService.GetAllCategoriesAsync()).ToList();
             await LoadPlans();
         }
+
+        defaultTrainingPlans = (await DefaultTrainingPlanService.GetAllPlansAsync()).ToList();
+        userTrainingPlans = (await UserTrainingPlanService.GetUserPlansAsync(userId!)).ToList();
     }
 
     protected override void OnParametersSet()
@@ -219,13 +224,11 @@
             
             if (selectedPlanType == "default")
             {
-                var defaultPlans = await DefaultTrainingPlanService.GetAllPlansAsync();
-                allPlans.AddRange(defaultPlans);
+                allPlans.AddRange(defaultTrainingPlans);
             }
             else
             {
-                var userPlans = await UserTrainingPlanService.GetUserPlansAsync(userId);
-                allPlans.AddRange(userPlans);
+                allPlans.AddRange(userTrainingPlans);
             }
 
             await FilterPlans();

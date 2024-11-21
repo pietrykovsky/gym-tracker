@@ -4,7 +4,7 @@ using FluentAssertions;
 using System;
 using System.Collections.Generic;
 
-namespace GymTracker.Tests.Components;
+namespace GymTracker.Tests.Components.Dashboard;
 
 public class CalendarTests : TestContext
 {

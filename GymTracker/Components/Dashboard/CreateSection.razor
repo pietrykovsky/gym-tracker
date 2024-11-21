@@ -6,7 +6,7 @@
     <div class="d-flex flex-row flex-lg-column align-items-center align-items-lg-start justify-content-between gap-3">
         <h4 class="m-0">Add new events</h4>
         <div class="d-flex flex-row flex-lg-column gap-2 flex-grow-lg-1 w-100">
-            <Button Color="ButtonColor.Primary" Class="w-100">
+            <Button Color="ButtonColor.Primary" Class="w-100" @onclick="@(() => sessionModal!.Show())">
                 <Icon Name="IconName.Stopwatch" /> Training session
             </Button>
             <Button Color="ButtonColor.Secondary" Class="w-100" @onclick="@(() => measurementModal!.Modal.ShowAsync())">
@@ -20,12 +20,20 @@
                      SelectedDate="SelectedDate" 
                      OnMeasurementSaved="@(async _ => await OnMeasurementAdded.InvokeAsync())" />
 
+<TrainingSessionModal @ref="sessionModal"
+                     SelectedDate="SelectedDate"
+                     OnSessionCreated="@(async () => await OnSessionCreated.InvokeAsync())" />
+
 @code {
     private BodyMeasurementModal? measurementModal;
+    private TrainingSessionModal? sessionModal;
     
     [Parameter]
     public DateOnly? SelectedDate { get; set; }
 
     [Parameter]
     public EventCallback OnMeasurementAdded { get; set; }
+
+    [Parameter]
+    public EventCallback OnSessionCreated { get; set; }
 }

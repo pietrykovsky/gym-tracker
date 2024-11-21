@@ -40,7 +40,7 @@ public class DatabaseSeederServiceTests
         var trainingPlans = await _dbContext.DefaultTrainingPlans
             .Include(p => p.Categories)
             .ToListAsync();
-        var activities = await _dbContext.TrainingActivities
+        var activities = await _dbContext.PlanActivities
             .Include(a => a.Sets)
             .ToListAsync();
 
@@ -135,7 +135,7 @@ public class DatabaseSeederServiceTests
         pushDay.Should().NotBeNull();
         pushDay!.Categories.Should().Contain(c => c.Name == "Split Routine");
 
-        var activities = await _dbContext.TrainingActivities
+        var activities = await _dbContext.PlanActivities
             .Include(a => a.Sets)
             .Include(a => a.Exercise)
             .Where(a => a.PlanId == pushDay.Id)
@@ -160,7 +160,7 @@ public class DatabaseSeederServiceTests
 
         fullBodyPlan.Should().NotBeNull();
 
-        var activities = await _dbContext.TrainingActivities
+        var activities = await _dbContext.PlanActivities
             .Where(a => a.PlanId == fullBodyPlan!.Id)
             .OrderBy(a => a.Order)
             .ToListAsync();
@@ -181,7 +181,7 @@ public class DatabaseSeederServiceTests
 
         strengthPlan.Should().NotBeNull();
 
-        var benchPressActivity = await _dbContext.TrainingActivities
+        var benchPressActivity = await _dbContext.PlanActivities
             .Include(a => a.Sets)
             .Include(a => a.Exercise)
             .FirstOrDefaultAsync(a => a.PlanId == strengthPlan!.Id && a.Exercise.Name == "Flat Barbell Bench Press");
@@ -239,7 +239,7 @@ public class DatabaseSeederServiceTests
         await _sut.SeedAsync();
 
         // Assert
-        var plankActivity = await _dbContext.TrainingActivities
+        var plankActivity = await _dbContext.PlanActivities
             .Include(a => a.Sets)
             .Include(a => a.Exercise)
             .FirstOrDefaultAsync(a => a.Exercise.Name == "Plank");

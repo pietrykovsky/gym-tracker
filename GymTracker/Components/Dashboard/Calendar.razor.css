@@ -31,12 +31,28 @@
     margin-top: 2px;
     justify-content: center;
     flex-wrap: wrap;
-    max-width: 24px; /* Allows for up to 5 dots */
+    max-width: 24px;
 }
 
 .dot {
     width: 4px;
     height: 4px;
-    background-color: #f3969a;
     border-radius: 50%;
+}
+
+.dot-measurement {
+    background-color: #f3969a; /* Bootstrap danger color */
+}
+
+.dot-session {
+    background-color: #78c2ad; /* Bootstrap primary color */
+}
+
+/* Support for multiple rows of dots */
+.calendar-day .d-flex.flex-column {
+    margin-top: 2px;
+}
+
+.calendar-day .activity-dots {
+    margin-top: 0;
 }

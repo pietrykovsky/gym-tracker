@@ -67,6 +67,8 @@ builder.Services.AddScoped<ITrainingPlanCategoryService, TrainingPlanCategorySer
 builder.Services.AddScoped<IDefaultTrainingPlanService, DefaultTrainingPlanService>();
 builder.Services.AddScoped<IUserMadeTrainingPlanService, UserMadeTrainingPlanService>();
 builder.Services.AddScoped<IPlanActivityService, PlanActivityService>();
+builder.Services.AddScoped<ITrainingSessionService, TrainingSessionService>();
+builder.Services.AddScoped<ITrainingActivityService, TrainingActivityService>();
 
 builder.Services.AddScoped<DatabaseSeederService>();
 

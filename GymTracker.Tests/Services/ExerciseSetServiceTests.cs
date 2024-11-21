@@ -28,7 +28,7 @@ public class ExerciseSetServiceTests
         var exercise = new DefaultExercise { Id = 1, Name = "Squat" };
         var activity = new PlanActivity { Id = 1, PlanId = 1, ExerciseId = 1 };
         _dbContext.DefaultExercises.Add(exercise);
-        _dbContext.TrainingActivities.Add(activity);
+        _dbContext.PlanActivities.Add(activity);
 
         var sets = new[]
         {

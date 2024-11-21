@@ -1,4 +1,5 @@
 ﻿@rendermode InteractiveServer
+
 @namespace GymTracker.Components.Dashboard
 
 <div class="col-12 col-lg-8 col-xl-6">
@@ -44,15 +45,26 @@
                                          @onclick="() => SelectDate(day)"
                                          data-testid="calendar-day-@day.ToString("yyyy-MM-dd")">
                                         <span>@day.Day</span>
-                                        @if (GetMeasurementCount(day) > 0)
-                                        {
-                                            <div class="activity-dots">
-                                                @for (int i = 0; i < Math.Min(GetMeasurementCount(day), 5); i++)
-                                                {
-                                                    <span class="dot"></span>
-                                                }
-                                            </div>
-                                        }
+                                        <div class="d-flex flex-column align-items-center gap-1">
+                                            @if (GetMeasurementCount(day) > 0)
+                                            {
+                                                <div class="activity-dots">
+                                                    @for (int i = 0; i < Math.Min(GetMeasurementCount(day), 3); i++)
+                                                    {
+                                                        <span class="dot dot-measurement"></span>
+                                                    }
+                                                </div>
+                                            }
+                                            @if (GetSessionCount(day) > 0)
+                                            {
+                                                <div class="activity-dots">
+                                                    @for (int i = 0; i < Math.Min(GetSessionCount(day), 3); i++)
+                                                    {
+                                                        <span class="dot dot-session"></span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             }
@@ -82,6 +94,9 @@
     private DateTime currentDate;
     private DateTime displayedDate;
     private readonly string[] DaysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    [Parameter]
+    public Dictionary<DateOnly, int> DatesWithSessions { get; set; } = new();
 
     [Parameter]
     public DateOnly? SelectedDate { get; set; }
@@ -152,6 +167,8 @@
 
         return calendar;
     }
+
+    private int GetSessionCount(DateOnly date) => DatesWithSessions?.GetValueOrDefault(date) ?? 0;
 
     private string GetDayClasses(DateOnly date)
     {

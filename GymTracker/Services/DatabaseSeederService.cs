@@ -133,7 +133,7 @@ public class DatabaseSeederService
                     activities.Add(newActivity);
                 }
 
-                await context.TrainingActivities.AddRangeAsync(activities);
+                await context.PlanActivities.AddRangeAsync(activities);
             }
         }
 

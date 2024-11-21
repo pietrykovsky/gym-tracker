@@ -1,0 +1,370 @@
+﻿@using GymTracker.Data
+@using GymTracker.Services
+@using System.Security.Claims
+@using BlazorBootstrap
+
+@namespace GymTracker.Components.Dashboard
+
+@inject IDefaultExerciseService DefaultExerciseService
+@inject IUserMadeExerciseService UserMadeExerciseService
+@inject ITrainingSessionService TrainingSessionService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<EditForm Model="@Session" OnValidSubmit="HandleValidSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="form-floating">
+                <InputDate @bind-Value="Session.Date" class="form-control" />
+                <label>Date</label>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="form-floating">
+                <InputTextArea @bind-Value="Session.Notes" class="form-control" style="height: 100px" />
+                <label>Notes</label>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <label class="mb-0">Activities</label>
+            </div>
+
+            <SortableList TItem="TrainingActivity"
+                         Data="Session.Activities"
+                         Context="activity"
+                         OnUpdate="HandleActivitiesReorder"
+                         Handle=".activity-handle">
+                <ItemTemplate>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="activity-handle pe-2">
+                                <Icon Name="IconName.GripVertical" />
+                            </div>
+                            <div class="flex-grow-1">
+                                @if (editingActivity == activity)
+                                {
+                                    <div class="row g-2">
+                                        <div class="col-8">
+                                            <AutoComplete @bind-Value="exerciseName"
+                                                        TItem="ExerciseBase"
+                                                        DataProvider="ExercisesDataProvider"
+                                                        PropertyName="Name"
+                                                        Placeholder="Search exercise..."
+                                                        OnChanged="@(ex => UpdateExercise(activity, ex))" />
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-items-center">
+                                        <span class="me-2">
+                                            @if (activity.Exercise != null)
+                                            {
+                                                @activity.Exercise.Name
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">No exercise selected</span>
+                                            }
+                                        </span>
+                                        <Badge Color="@(activity.Sets.Any() ? BadgeColor.Primary : BadgeColor.Secondary)">
+                                            @activity.Sets.Count @(activity.Sets.Count == 1 ? "set" : "sets")
+                                        </Badge>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <Button Color="ButtonColor.Light" Size="ButtonSize.Small"
+                                    @onclick="() => ToggleActivity(activity)">
+                                <Icon Name="@(editingActivity == activity ? IconName.ChevronUp : IconName.ChevronDown)"/>
+                            </Button>
+                            <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                                    @onclick="() => RemoveActivity(activity)">
+                                <Icon Name="IconName.X"/>
+                            </Button>
+                        </div>
+                    </div>
+                    @if (editingActivity == activity)
+                    {
+                        <div class="mt-3">
+                            <SortableList TItem="ExerciseSet"
+                                        Data="activity.Sets"
+                                        Context="set"
+                                        OnUpdate="args => HandleSetsReorder(activity, args)"
+                                        Handle=".set-handle">
+                                <ItemTemplate>
+                                    <div class="d-flex align-items-center gap-3 mb-2">
+                                        <div class="set-handle">
+                                            <Icon Name="IconName.GripVertical" />
+                                        </div>
+                                        <div class="form-group">
+                                            <input type="number" class="form-control form-control-sm" 
+                                                placeholder="Reps"
+                                                @bind="set.Repetitions" />
+                                        </div>
+                                        <div class="form-group">
+                                            <input type="number" class="form-control form-control-sm" 
+                                                placeholder="Weight (kg)"
+                                                @bind="set.Weight" 
+                                                step="0.5" />
+                                        </div>
+                                        <div class="form-group">
+                                            <input type="number" class="form-control form-control-sm" 
+                                                placeholder="Rest (s)"
+                                                @bind="set.RestAfterDuration" />
+                                        </div>
+                                        <Button Color="ButtonColor.Danger" Size="ButtonSize.Small"
+                                                @onclick="() => RemoveSet(activity, set)">
+                                            <Icon Name="IconName.X"/>
+                                        </Button>
+                                    </div>
+                                </ItemTemplate>
+                            </SortableList>
+                            <div class="d-grid mt-1">
+                                <Button Color="ButtonColor.Secondary" Size="ButtonSize.Small" 
+                                        @onclick="() => AddSet(activity)">
+                                    <Icon Name="IconName.PlusLg" /> Set
+                                </Button>
+                            </div>
+                        </div>
+                    }
+                </ItemTemplate>
+            </SortableList>
+            <div class="d-grid mt-1">
+                <Button Color="ButtonColor.Primary" @onclick="AddActivity" Type="ButtonType.Button">
+                    <Icon Name="IconName.PlusLg" /> Activity
+                </Button>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(validationMessage))
+    {
+        <div class="alert alert-danger mb-3">
+            @validationMessage
+        </div>
+    }
+
+    <div class="modal-footer mt-3">
+        <Button Color="ButtonColor.Secondary" @onclick="OnCancel">Cancel</Button>
+        <Button Color="ButtonColor.Primary" 
+                Type="ButtonType.Submit" 
+                Disabled="@(!IsValid)">
+            Save Session
+        </Button>
+    </div>
+</EditForm>
+
+@code {
+    [Parameter, EditorRequired]
+    public TrainingSession Session { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private string? userId;
+    private List<ExerciseBase> allExercises = [];
+    private TrainingActivity? editingActivity;
+    private string exerciseName = string.Empty;
+    private bool IsValid => Session.Activities.Any(a => a.ExerciseId > 0 && a.Sets.Any());
+    private string? validationMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await LoadExercises();
+        }
+    }
+
+    private async Task LoadExercises()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        var exercises = new List<ExerciseBase>();
+        var userExercises = await UserMadeExerciseService.GetUserExercisesAsync(userId);
+        var defaultExercises = await DefaultExerciseService.GetAllExercisesAsync();
+
+        exercises.AddRange(userExercises);
+        exercises.AddRange(defaultExercises);
+
+        allExercises = exercises
+            .OrderByDescending(e => e is UserMadeExercise)
+            .ThenBy(e => e.Name)
+            .ToList();
+    }
+
+    private async Task<AutoCompleteDataProviderResult<ExerciseBase>> ExercisesDataProvider(
+        AutoCompleteDataProviderRequest<ExerciseBase> request)
+    {
+        if (!allExercises.Any())
+        {
+            await LoadExercises();
+        }
+
+        return await Task.FromResult(request.ApplyTo(allExercises));
+    }
+
+    private void HandleActivitiesReorder(SortableListEventArgs args)
+    {
+        var item = Session.Activities[args.OldIndex];
+        Session.Activities.RemoveAt(args.OldIndex);
+        Session.Activities.Insert(args.NewIndex, item);
+
+        // Update order numbers
+        for (int i = 0; i < Session.Activities.Count; i++)
+        {
+            Session.Activities[i].Order = i + 1;
+        }
+    }
+
+    private void HandleSetsReorder(TrainingActivity activity, SortableListEventArgs args)
+    {
+        var item = activity.Sets[args.OldIndex];
+        activity.Sets.RemoveAt(args.OldIndex);
+        activity.Sets.Insert(args.NewIndex, item);
+
+        // Update order numbers
+        for (int i = 0; i < activity.Sets.Count; i++)
+        {
+            activity.Sets[i].Order = i + 1;
+        }
+    }
+
+    private void AddActivity()
+    {
+        var newActivity = new TrainingActivity
+        {
+            TrainingSessionId = Session.Id,
+            Order = Session.Activities.Count + 1,
+            Sets = new List<ExerciseSet>()
+        };
+
+        Session.Activities.Add(newActivity);
+        editingActivity = newActivity;
+        StateHasChanged();
+    }
+
+    private void RemoveActivity(TrainingActivity activity)
+    {
+        Session.Activities.Remove(activity);
+        
+        // Reorder remaining activities
+        for (int i = 0; i < Session.Activities.Count; i++)
+        {
+            Session.Activities[i].Order = i + 1;
+        }
+
+        if (editingActivity == activity)
+        {
+            editingActivity = null;
+        }
+
+        StateHasChanged();
+    }
+
+    private void AddSet(TrainingActivity activity)
+    {
+        var newSet = new ExerciseSet
+        {
+            ActivityId = activity.Id,
+            Order = activity.Sets.Count + 1,
+            Repetitions = 12,
+            RestAfterDuration = 60
+        };
+
+        activity.Sets.Add(newSet);
+        StateHasChanged();
+    }
+
+    private void RemoveSet(TrainingActivity activity, ExerciseSet set)
+    {
+        activity.Sets.Remove(set);
+
+        // Reorder remaining sets
+        for (int i = 0; i < activity.Sets.Count; i++)
+        {
+            activity.Sets[i].Order = i + 1;
+        }
+
+        StateHasChanged();
+    }
+
+    private void ToggleActivity(TrainingActivity activity)
+    {
+        editingActivity = editingActivity == activity ? null : activity;
+        if (editingActivity != null && editingActivity.Exercise != null)
+        {
+            exerciseName = editingActivity.Exercise.Name;
+        }
+        StateHasChanged();
+    }
+
+    private void UpdateExercise(TrainingActivity activity, ExerciseBase? exercise)
+    {
+        if (exercise is null) return;
+
+        activity.ExerciseId = exercise.Id;
+        activity.Exercise = exercise;
+        exerciseName = exercise.Name;
+        StateHasChanged();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try 
+        {
+            if (!Session.Activities.Any())
+            {
+                validationMessage = "Please add at least one activity to the session.";
+                StateHasChanged();
+                return;
+            }
+
+            if (!IsValid)
+            {
+                validationMessage = "Each activity must have an exercise selected and at least one set.";
+                StateHasChanged();
+                return;
+            }
+
+            validationMessage = null;
+
+            if (string.IsNullOrEmpty(userId)) return;
+
+            // Remove any invalid activities before saving
+            Session.Activities = Session.Activities
+                .Where(a => a.ExerciseId > 0 && a.Sets.Any())
+                .OrderBy(a => a.Order)
+                .ToList();
+
+            if (Session.Id == 0)
+            {
+                await TrainingSessionService.CreateCustomSessionAsync(userId, Session);
+            }
+            else
+            {
+                await TrainingSessionService.UpdateSessionAsync(userId, Session.Id, Session);
+            }
+
+            await OnSave.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            validationMessage = $"An error occurred: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+}

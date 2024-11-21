@@ -51,7 +51,7 @@ public class PlanActivityServiceTests
             }
         };
 
-        _dbContext.TrainingActivities.AddRange(activities);
+        _dbContext.PlanActivities.AddRange(activities);
         _dbContext.SaveChanges();
     }
 
@@ -117,7 +117,7 @@ public class PlanActivityServiceTests
 
         // Act
         var result = await _sut.UpdateActivitiesOrderAsync(1, newOrders);
-        var activities = await _dbContext.TrainingActivities
+        var activities = await _dbContext.PlanActivities
             .Where(a => a.PlanId == 1)
             .OrderBy(a => a.Order)
             .ToListAsync();

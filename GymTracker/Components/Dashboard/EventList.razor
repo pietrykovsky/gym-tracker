@@ -1,13 +1,15 @@
 ﻿@using System.Security.Claims
 @using GymTracker.Services
 @using GymTracker.Data
+@using BlazorBootstrap
 
 @inject IBodyMeasurementService MeasurementService
 @inject ITrainingSessionService TrainingSessionService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IJSRuntime JSRuntime
 
 @namespace GymTracker.Components.Dashboard
+
+<ConfirmDialog @ref="dialog" />
 
 <div class="row my-3">
     <h5 class="m-0">Measurements</h5>
@@ -67,6 +69,8 @@
     private int? expandedMeasurementId;
     private int? expandedSessionId;
     private readonly SemaphoreSlim _loadingSemaphore = new(1, 1);
+
+    private ConfirmDialog dialog = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -162,8 +166,10 @@
     {
         if (!string.IsNullOrEmpty(userId))
         {
-            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
-                "Are you sure you want to delete this measurement?");
+            var confirmed = await dialog!.ShowAsync(
+                title: "Delete Measurement",
+                message1: "Are you sure you want to delete this measurement?"
+            );
             if (confirmed)
             {
                 await MeasurementService.DeleteMeasurementAsync(userId, measurement.Id);
@@ -177,8 +183,10 @@
     {
         if (!string.IsNullOrEmpty(userId))
         {
-            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
-                "Are you sure you want to delete this training session?");
+            var confirmed = await dialog!.ShowAsync(
+                title: "Delete Training Session",
+                message1: "Are you sure you want to delete this training session?"
+            );
             if (confirmed)
             {
                 await TrainingSessionService.DeleteSessionAsync(userId, session.Id);

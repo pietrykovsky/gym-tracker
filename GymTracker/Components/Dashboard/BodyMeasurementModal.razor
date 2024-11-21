@@ -9,11 +9,11 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
-<Modal @ref="this.Modal" Title="@(IsEdit ? "Edit Measurement" : "Add New Measurement")" IsVerticallyCentered="true" IsScrollable="true">
+<Modal @ref="this.Modal" Size="ModalSize.Large" Title="@(IsEdit ? "Edit Measurement" : "Add New Measurement")" IsVerticallyCentered="true" IsScrollable="true">
     <BodyTemplate>
         <EditForm id="measurementForm" Model="@measurement" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
-            <ValidationSummary class="text-danger mb-3" />
+            <ValidationSummary class="text-danger mb-3" role="alert" />
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="form-floating">

@@ -12,7 +12,7 @@
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 
-<Modal @ref="modal" Title="Start Training Session" UseStaticBackdrop="true" CloseOnEscape="false" IsVerticallyCentered="true" IsScrollable="true">
+<Modal @ref="modal" Size="ModalSize.Large" Title="Start Training Session" UseStaticBackdrop="true" CloseOnEscape="false" IsVerticallyCentered="true" IsScrollable="true">
     <BodyTemplate>
         @if (currentStep == SessionStep.Initial)
         {

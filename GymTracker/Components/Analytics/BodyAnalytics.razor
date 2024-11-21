@@ -1,0 +1,149 @@
+﻿@using GymTracker.Services
+@using BlazorBootstrap
+
+@rendermode InteractiveServer
+
+@namespace GymTracker.Components.Analytics
+
+@inject IAnalyticsService AnalyticsService
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center my-2">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row my-2">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Weight & BMI</h5>
+                    <div class="overflow-x-auto">
+                        <LineChart @ref="measurementsChart" Width="500" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Body Composition</h5>
+                    <div class="overflow-x-auto">
+                        <LineChart @ref="compositionChart" Width="500" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Body Circumferences</h5>
+                    <div class="overflow-x-auto">
+                        <LineChart @ref="circumferencesChart" Width="500" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public required string UserId { get; set; }
+
+    [Parameter]
+    public required DateTime StartDate { get; set; }
+
+    [Parameter]
+    public required DateTime EndDate { get; set; }
+
+    private LineChart measurementsChart = default!;
+    private LineChart compositionChart = default!;
+    private LineChart circumferencesChart = default!;
+    private LineChartOptions chartOptions = default!;
+    
+    private ChartData measurementsData = default!;
+    private ChartData compositionData = default!;
+    private ChartData circumferencesData = default!;
+    
+    private bool isLoading = true;
+
+    protected override void OnInitialized()
+    {
+        chartOptions = new()
+        {
+            Responsive = true,
+            Interaction = new Interaction { Mode = InteractionMode.Index, Intersect = false }
+        };
+
+        measurementsData = new ChartData();
+        compositionData = new ChartData();
+        circumferencesData = new ChartData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (measurementsData != null && compositionData != null && circumferencesData != null)
+        {
+            await InitializeCharts();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        try
+        {
+            await LoadChartData();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadChartData()
+    {
+        var startDate = DateOnly.FromDateTime(StartDate);
+        var endDate = DateOnly.FromDateTime(EndDate);
+
+        var measurementsNewData = await AnalyticsService.GetBodyMeasurementsChart(
+            UserId, startDate, endDate);
+        var compositionNewData = await AnalyticsService.GetBodyCompositionChart(
+            UserId, startDate, endDate);
+        var circumferencesnewData = await AnalyticsService.GetBodyCircumferencesChart(
+            UserId, startDate, endDate);
+
+        measurementsData.Datasets = measurementsNewData.Datasets;
+        measurementsData.Labels = measurementsNewData.Labels;
+
+        compositionData.Datasets = compositionNewData.Datasets;
+        compositionData.Labels = compositionNewData.Labels;
+
+        circumferencesData.Datasets = circumferencesnewData.Datasets;
+        circumferencesData.Labels = circumferencesnewData.Labels;
+    }
+
+    private async Task InitializeCharts()
+    {
+        if (measurementsData != null && compositionData != null && circumferencesData != null)
+        {
+            await LoadChartData();
+
+            await measurementsChart.InitializeAsync(measurementsData, chartOptions);
+            await compositionChart.InitializeAsync(compositionData, chartOptions);
+            await circumferencesChart.InitializeAsync(circumferencesData, chartOptions);
+        }
+    }
+}

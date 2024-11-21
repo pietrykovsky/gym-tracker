@@ -1,0 +1,200 @@
+﻿@using BlazorBootstrap
+@using GymTracker.Services
+
+@rendermode InteractiveServer
+
+@namespace GymTracker.Components.Analytics
+
+@inject IAnalyticsService AnalyticsService
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center my-2">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row my-2">
+        <div class="col-md-4">
+            <div class="form-floating">
+                <select class="form-select" @bind="selectedExerciseId" @bind:after="UpdateChartData">
+                    @if (exercises != null)
+                    {
+                        @foreach (var exercise in exercises)
+                        {
+                            <option value="@exercise.ExerciseId">
+                                @exercise.ExerciseName (@exercise.TimesPerformed times)
+                            </option>
+                        }
+                    }
+                </select>
+                <label>Select Exercise</label>
+            </div>
+        </div>
+    </div>
+
+    @if (selectedExerciseId > 0)
+    {
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Weight Progression</h5>
+                        <div class="overflow-x-auto">
+                            <LineChart @ref="progressionChart" Width="500" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Volume Load</h5>
+                        <div class="overflow-x-auto">
+                            <LineChart @ref="volumeChart" Width="500" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">Sets & Reps Distribution</h5>
+                        <div class="overflow-x-auto">
+                            <BarChart @ref="distributionChart" Width="500" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter]
+    public required string UserId { get; set; }
+
+    [Parameter]
+    public required DateTime StartDate { get; set; }
+
+    [Parameter]
+    public required DateTime EndDate { get; set; }
+
+    private List<ExerciseAnalyticsSummary>? exercises;
+    private int selectedExerciseId;
+    private bool isLoading = true;
+
+    private LineChart progressionChart = default!;
+    private LineChart volumeChart = default!;
+    private BarChart distributionChart = default!;
+    
+    private LineChartOptions lineChartOptions = default!;
+    private BarChartOptions barChartOptions = default!;
+
+    private ChartData progressionData = default!;
+    private ChartData volumeData = default!;
+    private ChartData distributionData = default!;
+
+    protected override void OnInitialized()
+    {
+        lineChartOptions = new()
+        {
+            Responsive = true,
+            Interaction = new Interaction { Mode = InteractionMode.Index, Intersect = false }
+        };
+
+        barChartOptions = new()
+        {
+            Responsive = true,
+            Interaction = new Interaction { Mode = InteractionMode.Index }
+        };
+
+        progressionData = new ChartData();
+        volumeData = new ChartData();
+        distributionData = new ChartData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadExercises();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (selectedExerciseId > 0 &&
+            progressionData != null && volumeData != null && distributionData != null)
+        {
+            await InitializeCharts();
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    private async Task LoadExercises()
+    {
+        isLoading = true;
+
+        try
+        {
+            var startDate = DateOnly.FromDateTime(StartDate);
+            var endDate = DateOnly.FromDateTime(EndDate);
+
+            exercises = await AnalyticsService.GetUserExercisesInRange(UserId, startDate, endDate);
+
+            if (exercises.Any() && selectedExerciseId == 0)
+            {
+                selectedExerciseId = exercises.First().ExerciseId;
+                await LoadChartData();
+            }
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadChartData()
+    {
+        var startDate = DateOnly.FromDateTime(StartDate);
+        var endDate = DateOnly.FromDateTime(EndDate);
+
+        var progressionNewData = await AnalyticsService.GetExerciseProgressionChart(
+            UserId, selectedExerciseId, startDate, endDate);
+        var volumeNewData = await AnalyticsService.GetExerciseVolumeChart(
+            UserId, selectedExerciseId, startDate, endDate);
+        var distributionNewData = await AnalyticsService.GetExerciseSetsRepsDistribution(
+            UserId, selectedExerciseId, startDate, endDate);
+
+        progressionData!.Datasets = progressionNewData.Datasets;
+        progressionData.Labels = progressionNewData.Labels;
+
+        volumeData!.Datasets = volumeNewData.Datasets;
+        volumeData.Labels = volumeNewData.Labels;
+
+        distributionData!.Datasets = distributionNewData.Datasets;
+        distributionData.Labels = distributionNewData.Labels;
+    }
+
+    private async Task UpdateChartData()
+    {
+        await LoadChartData();
+
+        await progressionChart.UpdateValuesAsync(progressionData);
+        await volumeChart.UpdateValuesAsync(volumeData);
+        await distributionChart.UpdateValuesAsync(distributionData);
+    }
+
+    private async Task InitializeCharts()
+    {
+        if (progressionData != null && volumeData != null && distributionData != null)
+        {
+            await LoadChartData();
+
+            await progressionChart.InitializeAsync(progressionData, lineChartOptions);
+            await volumeChart.InitializeAsync(volumeData, lineChartOptions);
+            await distributionChart.InitializeAsync(distributionData, barChartOptions);
+        }
+    }
+}

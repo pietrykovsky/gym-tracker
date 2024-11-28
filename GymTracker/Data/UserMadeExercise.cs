@@ -9,5 +9,14 @@ public class UserMadeExercise : ExerciseBase
 
     public virtual ApplicationUser User { get; set; } = null!;
 
-    public virtual List<ExerciseCategory> Categories { get; set; } = [];
+    public virtual List<ExerciseCategory> Categories { get; set; } = new List<ExerciseCategory>();
+
+    public override MovementType GetMovementType()
+    {
+        if (Categories.Count > 0)
+        {
+            return MovementType.Compound;
+        }
+        return MovementType.Isolation;
+    }
 }

@@ -35,7 +35,10 @@ public class DatabaseSeederServiceTests
 
         // Assert
         var exerciseCategories = await _dbContext.ExerciseCategories.ToListAsync();
-        var exercises = await _dbContext.DefaultExercises.ToListAsync();
+        var exercises = await _dbContext.DefaultExercises
+            .Include(e => e.Categories)
+            .Include(e => e.PrimaryCategory)
+            .ToListAsync();
         var trainingPlanCategories = await _dbContext.TrainingPlanCategories.ToListAsync();
         var trainingPlans = await _dbContext.DefaultTrainingPlans
             .Include(p => p.Categories)
@@ -49,8 +52,9 @@ public class DatabaseSeederServiceTests
         exerciseCategories.Should().HaveCount(13);
         exercises.Should().NotBeEmpty();
         exercises.Should().HaveCount(151);
-        exercises.All(e => e.Categories.Count() != 0).Should().BeTrue();
-        exercises.All(e => exerciseCategories.Select(c => c.Id).Contains(e.Categories.First().Id)).Should().BeTrue();
+        exercises.All(e => e.PrimaryCategory != null).Should().BeTrue();
+        exercises.All(e => exerciseCategories.Select(c => c.Id).Contains(e.PrimaryCategory.Id)).Should().BeTrue();
+        exercises.All(e => e.Categories.All(c => c.Id != e.PrimaryCategory.Id)).Should().BeTrue();
 
         // Verify training plan data
         trainingPlanCategories.Should().NotBeEmpty();

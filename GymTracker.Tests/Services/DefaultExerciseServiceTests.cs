@@ -25,8 +25,10 @@ public class DefaultExerciseServiceTests
 
     private void SeedData()
     {
-        var category1 = new ExerciseCategory { Id = 1, Name = "Category1" };
-        var category2 = new ExerciseCategory { Id = 2, Name = "Category2" };
+        var category1 = new ExerciseCategory { Id = 1, Name = "Primary" };
+        var category2 = new ExerciseCategory { Id = 2, Name = "Other1" };
+        var category3 = new ExerciseCategory { Id = 3, Name = "Other2" };
+
 
         _dbContext.ExerciseCategories.AddRange(category1, category2);
 
@@ -36,21 +38,23 @@ public class DefaultExerciseServiceTests
                 Id = 1,
                 Name = "Exercise1",
                 Difficulty = ExerciseDifficulty.Beginner,
-                Categories = new List<ExerciseCategory> { category1 }
+                PrimaryCategoryId = category1.Id,
             },
             new DefaultExercise
             {
                 Id = 2,
                 Name = "Exercise2",
                 Difficulty = ExerciseDifficulty.Intermediate,
-                Categories = new List<ExerciseCategory> { category1, category2 }
+                PrimaryCategoryId = category1.Id,
+                Categories = new List<ExerciseCategory> { category2 }
             },
             new DefaultExercise
             {
                 Id = 3,
                 Name = "Exercise3",
                 Difficulty = ExerciseDifficulty.Advanced,
-                Categories = new List<ExerciseCategory> { category2 }
+                PrimaryCategoryId = category1.Id,
+                Categories = new List<ExerciseCategory> { category2, category3 }
             }
         );
 
@@ -73,23 +77,25 @@ public class DefaultExerciseServiceTests
     public async Task GetAllExercisesByCategoryAsync_ReturnsExercisesInCategory()
     {
         // Act
-        var result = await _sut.GetAllExercisesByCategoryAsync(1);
+        var result = await _sut.GetAllExercisesByCategoryAsync(2);
 
         // Assert
         result.Should().HaveCount(2);
-        result.All(e => e.Categories.Any(c => c.Id == 1)).Should().BeTrue();
+        result.All(e => e.Categories.Any(c => c.Id == 2)).Should().BeTrue();
     }
 
     [Fact]
     public async Task GetExerciseByIdAsync_ReturnsCorrectExercise()
     {
         // Act
-        var result = await _sut.GetExerciseByIdAsync(1);
+        var result = await _sut.GetExerciseByIdAsync(3);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Name.Should().Be("Exercise1");
-        result.Categories.Should().HaveCount(1);
+        result!.Name.Should().Be("Exercise3");
+        result.PrimaryCategory.Should().NotBeNull();
+        result.PrimaryCategory.Name.Should().Be("Primary");
+        result.Categories.Should().HaveCount(2);
     }
 
     [Fact]

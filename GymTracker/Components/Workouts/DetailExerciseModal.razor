@@ -16,7 +16,14 @@
             </div>
 
             <div class="col-12">
-                <h6 class="text-muted mb-2">Categories</h6>
+                <h6 class="text-muted mb-2">Primary muscle group</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    <Badge Color="BadgeColor.Primary">@exercise.PrimaryCategory.Name</Badge>
+                </div>
+            </div>
+
+            <div class="col-12">
+                <h6 class="text-muted mb-2">Muscle groups</h6>
                 <div class="d-flex flex-wrap gap-2">
                     @foreach (var category in GetCategories())
                     {
@@ -31,9 +38,21 @@
             </div>
 
             <div class="col-12">
+                <h6 class="text-muted mb-2">Required Equipment</h6>
+                <Badge Color="BadgeColor.Primary">@exercise.RequiredEquipment</Badge>
+            </div>
+
+            <div class="col-12">
                 <h6 class="text-muted mb-2">Type</h6>
                 <Badge Color="@(exercise is UserMadeExercise ? BadgeColor.Info : BadgeColor.Secondary)">
                     @(exercise is UserMadeExercise ? "Custom" : "Default")
+                </Badge>
+            </div>
+
+            <div class="col-12">
+                <h6 class="text-muted mb-2">Movement Type</h6>
+                <Badge Color="@(exercise.GetMovementType() == MovementType.Compound ? BadgeColor.Info : BadgeColor.Secondary)">
+                   @exercise.GetMovementType()
                 </Badge>
             </div>
 

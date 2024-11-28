@@ -31,15 +31,28 @@
 
                 <!-- Filters -->
                 <div class="d-flex gap-3 flex-wrap">
-                    <!-- Category Filter -->
+                    <!-- Primary Category Filter -->
                     <div class="form-group">
-                        <select class="form-select" @bind="selectedCategoryId" @bind:after="FilterExercises">
+                        <select id="primary-category-filter" class="form-select" @bind="selectedPrimaryCategoryId" @bind:after="FilterExercises">
                             <option value="0">All Categories</option>
                             @foreach (var category in categories)
                             {
                                 <option value="@category.Id">@category.Name</option>
                             }
                         </select>
+                        <label for="primary-category-filter">Primary Muscle Group</label>
+                    </div>
+
+                    <!-- Category Filter -->
+                    <div class="form-group">
+                        <select id="other-categories-filter" class="form-select" @bind="selectedCategoryId" @bind:after="FilterExercises">
+                            <option value="0">All Categories</option>
+                            @foreach (var category in categories)
+                            {
+                                <option value="@category.Id">@category.Name</option>
+                            }
+                        </select>
+                        <label for="other-categories-filter">Other Muscle Groups</label>
                     </div>
 
                     <!-- Difficulty Filter -->
@@ -49,6 +62,17 @@
                             @foreach (var difficulty in Enum.GetValues<ExerciseDifficulty>())
                             {
                                 <option value="@((int)difficulty)">@difficulty</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Equipment Filter -->
+                    <div class="form-group">
+                        <select class="form-select" @bind="selectedEquipment" @bind:after="FilterExercises">
+                            <option value="-1">All Equipments</option>
+                            @foreach (var equipment in Enum.GetValues<Equipment>())
+                            {
+                                <option value="@((int)equipment)">@equipment</option>
                             }
                         </select>
                     </div>
@@ -73,13 +97,21 @@
                 {
                     <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearSearchFilter">@searchedExerciseName <Icon Name="IconName.X" /></Badge>
                 }
+                @if (selectedPrimaryCategoryId > 0)
+                {
+                    <Badge Color="BadgeColor.Primary" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearPrimaryCategoryFilter">@categories.Find(c => c.Id == selectedPrimaryCategoryId)?.Name <Icon Name="IconName.X" /></Badge>
+                }
                 @if (selectedCategoryId > 0)
                 {
-                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearCategoryFilter">@categories.Find(c => c.Id == selectedCategoryId)?.Name <Icon Name="IconName.X" /></Badge>
+                    <Badge Color="BadgeColor.Secondary" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearCategoryFilter">@categories.Find(c => c.Id == selectedCategoryId)?.Name <Icon Name="IconName.X" /></Badge>
                 }
                 @if (selectedDifficulty >= 0)
                 {
                     <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearDifficultyFilter">@((ExerciseDifficulty)selectedDifficulty) <Icon Name="IconName.X" /></Badge>
+                }
+                @if (selectedEquipment >= 0)
+                {
+                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearEquipmentFilter">@((Equipment)selectedEquipment) <Icon Name="IconName.X" /></Badge>
                 }
                 @if (selectedType != "all")
                 {
@@ -102,8 +134,10 @@
                 <thead>
                     <tr>
                         <th>Name</th>
-                        <th>Categories</th>
+                        <th>Primary Muscle Group</th>
+                        <th>Other Muscle Groups</th>
                         <th>Difficulty</th>
+                        <th>Required Equipment</th>
                         <th>Type</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -122,24 +156,32 @@
                             <tr>
                                 <td @onclick="() => detailExerciseModal!.Show(exercise)">@exercise.Name</td>
                                 <td @onclick="() => detailExerciseModal!.Show(exercise)">
+                                    <Badge Color="BadgeColor.Primary" Class="me-1">@exercise.PrimaryCategory.Name</Badge>
+                                </td>
+                                <td @onclick="() => detailExerciseModal!.Show(exercise)">
                                     @if (exercise is DefaultExercise defaultExercise)
                                     {
                                         @foreach (var category in defaultExercise.Categories)
                                         {
-                                            <Badge Color="BadgeColor.Primary" Class="me-1">@category.Name</Badge>
+                                            <Badge Color="BadgeColor.Secondary" Class="me-1">@category.Name</Badge>
                                         }
                                     }
                                     else if (exercise is UserMadeExercise userExercise)
                                     {
                                         @foreach (var category in userExercise.Categories)
                                         {
-                                            <Badge Color="BadgeColor.Primary" Class="me-1">@category.Name</Badge>
+                                            <Badge Color="BadgeColor.Secondary" Class="me-1">@category.Name</Badge>
                                         }
                                     }
                                 </td>
                                 <td @onclick="() => detailExerciseModal!.Show(exercise)">
                                     <Badge Color="@GetDifficultyColor(exercise.Difficulty)">
                                         @exercise.Difficulty.ToString()
+                                    </Badge>
+                                </td>
+                                <td @onclick="() => detailExerciseModal!.Show(exercise)">
+                                    <Badge Color="BadgeColor.Info">
+                                        @exercise.RequiredEquipment.ToString()
                                     </Badge>
                                 </td>
                                 <td @onclick="() => detailExerciseModal!.Show(exercise)">
@@ -191,8 +233,10 @@
     private bool isLoading = true;
     private string? userId;
     private string searchedExerciseName = string.Empty;
+    private int selectedPrimaryCategoryId;
     private int selectedCategoryId;
     private int selectedDifficulty = -1;
+    private int selectedEquipment = -1;
     private string selectedType = "all";
     private int currentPage = 1;
     private int totalPages;
@@ -263,6 +307,13 @@
         filteredExercises = allExercises.ToList();
 
         // Apply category filter
+        if (selectedPrimaryCategoryId != 0)
+        {
+            filteredExercises = filteredExercises
+                .Where(e => e.PrimaryCategoryId == selectedPrimaryCategoryId)
+                .ToList();
+        }
+
         if (selectedCategoryId != 0)
         {
             filteredExercises = filteredExercises
@@ -278,6 +329,14 @@
         {
             filteredExercises = filteredExercises
                 .Where(e => (int)e.Difficulty == selectedDifficulty)
+                .ToList();
+        }
+
+        // Apply equipment filter
+        if (selectedEquipment >= 0)
+        {
+            filteredExercises = filteredExercises
+                .Where(e => (int)e.RequiredEquipment == selectedEquipment)
                 .ToList();
         }
 
@@ -308,6 +367,12 @@
         await FilterExercises();
     }
 
+    private async Task ClearPrimaryCategoryFilter()
+    {
+        selectedPrimaryCategoryId = 0;
+        await FilterExercises();
+    }
+
     private async Task ClearCategoryFilter()
     {
         selectedCategoryId = 0;
@@ -317,6 +382,12 @@
     private async Task ClearDifficultyFilter()
     {
         selectedDifficulty = -1;
+        await FilterExercises();
+    }
+
+    private async Task ClearEquipmentFilter()
+    {
+        selectedEquipment = -1;
         await FilterExercises();
     }
 

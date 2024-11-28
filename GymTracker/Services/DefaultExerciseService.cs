@@ -17,6 +17,7 @@ public class DefaultExerciseService : IDefaultExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.DefaultExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .OrderBy(e => e.Name)
             .ToListAsync();
@@ -27,6 +28,7 @@ public class DefaultExerciseService : IDefaultExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.DefaultExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .Where(e => e.Categories.Any(c => c.Id == categoryId))
             .OrderBy(e => e.Name)
@@ -38,6 +40,7 @@ public class DefaultExerciseService : IDefaultExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.DefaultExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .FirstOrDefaultAsync(e => e.Id == id);
     }
@@ -47,6 +50,7 @@ public class DefaultExerciseService : IDefaultExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.DefaultExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .Where(e => e.Difficulty == difficulty)
             .OrderBy(e => e.Name)
@@ -58,6 +62,7 @@ public class DefaultExerciseService : IDefaultExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.DefaultExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .Where(e => e.Difficulty <= maxDifficulty)
             .OrderBy(e => e.Difficulty)
@@ -75,6 +80,7 @@ public class DefaultExerciseService : IDefaultExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.DefaultExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .Where(e => e.Difficulty >= minDifficulty && e.Difficulty <= maxDifficulty)
             .OrderBy(e => e.Difficulty)

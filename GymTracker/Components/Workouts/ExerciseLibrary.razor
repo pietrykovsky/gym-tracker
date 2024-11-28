@@ -146,6 +146,7 @@
                         <th>Other Muscle Groups</th>
                         <th>Difficulty</th>
                         <th>Required Equipment</th>
+                        <th>Movement</th>
                         <th>Type</th>
                         <th class="text-end">Actions</th>
                     </tr>
@@ -190,6 +191,11 @@
                                 <td @onclick="() => detailExerciseModal!.Show(exercise)">
                                     <Badge Color="BadgeColor.Info">
                                         @exercise.RequiredEquipment.ToString()
+                                    </Badge>
+                                </td>
+                                <td @onclick="() => detailExerciseModal!.Show(exercise)">
+                                    <Badge Color="@(exercise.GetMovementType() == MovementType.Compound ? BadgeColor.Info : BadgeColor.Secondary)">
+                                        @exercise.GetMovementType().ToString()
                                     </Badge>
                                 </td>
                                 <td @onclick="() => detailExerciseModal!.Show(exercise)">

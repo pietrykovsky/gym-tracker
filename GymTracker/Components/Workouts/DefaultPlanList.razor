@@ -12,48 +12,43 @@
 <ConfirmDialog @ref="dialog" />
 
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center mt-4 mb-2">
-                <!-- Search -->
-                <div class="flex-grow-1">
-                    <AutoComplete @bind-Value="searchedPlanName"
-                                TItem="DefaultTrainingPlan"
-                                DataProvider="PlansDataProvider"
-                                PropertyName="Name"
-                                Placeholder="Search training plans..."
-                                OnChanged="FilterPlans" />
-                </div>
+    <div class="row my-2">
+        <!-- Search -->
+        <div class="col-md-8 col-lg-6 col-xl-4 mb-1">
+            <AutoComplete @bind-Value="searchedPlanName"
+                        TItem="DefaultTrainingPlan"
+                        DataProvider="PlansDataProvider"
+                        PropertyName="Name"
+                        Placeholder="Search training plans..."
+                        OnChanged="FilterPlans" />
+        </div>
 
-                <!-- Filters -->
-                <div class="d-flex gap-3 flex-wrap">
-                    <!-- Category Filter -->
-                    <div class="form-group">
-                        <select class="form-select" @bind="selectedCategoryId" @bind:after="FilterPlans">
-                            <option value="0">All Categories</option>
-                            @foreach (var category in categories)
-                            {
-                                <option value="@category.Id">@category.Name</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center">
-                @if (!string.IsNullOrEmpty(searchedPlanName))
-                {
-                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearSearchFilter">
-                        @searchedPlanName <Icon Name="IconName.X" />
-                    </Badge>
-                }
-                @if (selectedCategoryId > 0)
-                {
-                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearCategoryFilter">
-                        @categories.Find(c => c.Id == selectedCategoryId)?.Name <Icon Name="IconName.X" />
-                    </Badge>
-                }
+        <!-- Category Filter -->
+        <div class="col-md-4 col-lg-3 col-xl-2 mb-1">
+            <div class="form-group">
+                <select class="form-select" @bind="selectedCategoryId" @bind:after="FilterPlans">
+                    <option value="0">All Categories</option>
+                    @foreach (var category in categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
             </div>
         </div>
+    </div>
+    <div class="d-flex flex-md-row gap-3 align-items-start align-items-md-center flex-wrap">
+        @if (!string.IsNullOrEmpty(searchedPlanName))
+        {
+            <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearSearchFilter">
+                @searchedPlanName <Icon Name="IconName.X" />
+            </Badge>
+        }
+        @if (selectedCategoryId > 0)
+        {
+            <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearCategoryFilter">
+                @categories.Find(c => c.Id == selectedCategoryId)?.Name <Icon Name="IconName.X" />
+            </Badge>
+        }
     </div>
 
     @if (isLoading)

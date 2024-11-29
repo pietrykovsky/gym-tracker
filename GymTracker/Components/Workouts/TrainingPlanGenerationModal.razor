@@ -21,35 +21,35 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <div class="form-floating">
-                            <select class="form-select" @bind="parameters.TrainingGoal">
+                            <InputSelect class="form-select" @bind-Value="parameters.TrainingGoal">
                                 <option value="@TrainingGoal.Strength">Strength</option>
                                 <option value="@TrainingGoal.Hypertrophy">Muscle Growth</option>
                                 <option value="@TrainingGoal.Endurance">Endurance</option>
-                            </select>
+                            </InputSelect>
                             <label>Training Focus</label>
                         </div>
                     </div>
 
                     <div class="col-md-6">
                         <div class="form-floating">
-                            <select class="form-select" @bind="parameters.ExperienceLevel">
-                                <option value="@ExperienceLevel.Untrained">Less than 1 year</option>
-                                <option value="@ExperienceLevel.Trained">1-3 years</option>
-                                <option value="@ExperienceLevel.Advanced">More than 3 years</option>
-                            </select>
+                            <InputSelect class="form-select" @bind-Value="parameters.ExperienceLevel">
+                                @foreach (var level in Enum.GetValues<ExperienceLevel>())
+                                {
+                                    <option value="@level">@level</option>
+                                }
+                            </InputSelect>
                             <label>Training Experience</label>
                         </div>
                     </div>
 
                     <div class="col-md-6">
                         <div class="form-floating">
-                            <select class="form-select" @bind="parameters.TrainingDays">
-                                <option value="2">2 days per week</option>
-                                <option value="3">3 days per week</option>
-                                <option value="4">4 days per week</option>
-                                <option value="5">5 days per week</option>
-                                <option value="6">6 days per week</option>
-                            </select>
+                            <InputSelect class="form-select" @bind-Value="parameters.TrainingDays">
+                                @for (int i = 1; i <= 6; i++)
+                                {
+                                    <option value="@i">@i days per week</option>
+                                }
+                            </InputSelect>
                             <label>Training Frequency</label>
                         </div>
                     </div>
@@ -102,21 +102,21 @@
                     {
                         <div class="form-group">
                             <label class="form-label">Select workout day type:</label>
-                            <select class="form-select" @bind="selectedUpperLowerDay">
+                            <InputSelect class="form-select" @bind-Value="selectedUpperLowerDay">
                                 <option value="@UpperLowerWorkoutDay.Upper">Upper Body</option>
                                 <option value="@UpperLowerWorkoutDay.Lower">Lower Body</option>
-                            </select>
+                            </InputSelect>
                         </div>
                     }
                     else if (workoutType == WorkoutType.PushPull)
                     {
                         <div class="form-group">
                             <label class="form-label">Select workout day type:</label>
-                            <select class="form-select" @bind="selectedPushPullDay">
+                            <InputSelect class="form-select" @bind-Value="selectedPushPullDay">
                                 <option value="@PushPullWorkoutDay.Push">Push</option>
                                 <option value="@PushPullWorkoutDay.Pull">Pull</option>
                                 <option value="@PushPullWorkoutDay.Legs">Legs</option>
-                            </select>
+                            </InputSelect>
                         </div>
                     }
                 </div>
@@ -136,11 +136,11 @@
 
                     @foreach (var exercise in selectedExercises.Where(e => e.RequiredEquipment != Equipment.None))
                     {
-                        var exerciseId = exercise.Id; // Create local variable
+                        var exerciseId = exercise.Id;
                         <div class="form-floating mb-3">
                             <input type="number" class="form-control" 
                                    @bind="@repMaxes[exerciseId]"
-                                   step="0.5" />
+                                   step="2.5" />
                             <label>@exercise.Name (kg)</label>
                         </div>
                     }
@@ -252,7 +252,7 @@
     public async Task Show()
     {
         currentStep = GenerationStep.Initial;
-        parameters = new();
+        parameters = new() { TrainingGoal = TrainingGoal.Strength, ExperienceLevel = ExperienceLevel.Untrained, TrainingDays = 3 };
         selectedEquipment = new() { Equipment.None };
         selectedExercises.Clear();
         repMaxes.Clear();

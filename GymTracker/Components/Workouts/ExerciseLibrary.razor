@@ -18,7 +18,7 @@
 <div class="container-fluid">
     <div class="row my-2">
         <!-- Filters -->
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2"
+        <div class="col-sm-6 col-md-4 col-lg-3 col-xl-2 mb-1"
             <AutoComplete @bind-Value="searchedExerciseName"
                         TItem="ExerciseBase"
                         DataProvider="ExercisesDataProvider"
@@ -28,7 +28,7 @@
         </div>
 
         <!-- Primary Category Filter -->
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xl">
+        <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-1">
             <div class="form-floating">
                 <select id="primary-category-filter" class="form-select" @bind="selectedPrimaryCategoryId" @bind:after="FilterExercises">
                     <option value="0">All Categories</option>
@@ -42,7 +42,7 @@
         </div>
 
         <!-- Category Filter -->
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xl">
+        <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-1">
             <div class="form-floating">
                 <select id="other-categories-filter" class="form-select" @bind="selectedCategoryId" @bind:after="FilterExercises">
                     <option value="0">All Categories</option>
@@ -56,7 +56,7 @@
         </div>
 
         <!-- Difficulty Filter -->
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xl">
+        <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-1">
             <div class="form-floating">
                 <select id="difficulty-filter" class="form-select" @bind="selectedDifficulty" @bind:after="FilterExercises">
                     <option value="-1">All Difficulties</option>
@@ -70,7 +70,7 @@
         </div>
 
         <!-- Equipment Filter -->
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xl">
+        <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-1">
             <div class="form-floating">
                 <select id="equipment-filter" class="form-select" @bind="selectedEquipment" @bind:after="FilterExercises">
                     <option value="-1">All Equipments</option>
@@ -84,7 +84,7 @@
         </div>
 
         <!-- Type Filter -->
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xl">
+        <div class="col-sm-6 col-md-4 col-lg-3 col-xl mb-1">
             <div class="form-floating">
                 <select id="type-filter" class="form-select" @bind="selectedType" @bind:after="FilterExercises">
                     <option value="all">All Types</option>
@@ -96,13 +96,13 @@
         </div>
 
         <!-- Add Exercise Button -->
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xl">
+        <div class="col-md-4 col-lg-3 col-xl mb-1">
             <Button Class="w-100 h-100" Color="ButtonColor.Primary" @onclick="ShowCreateModal">
                 <Icon Name="IconName.Plus"/> New Exercise
             </Button>
         </div>
     </div>
-    <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center">
+    <div class="d-flex flex-md-row gap-3 align-items-start align-items-md-center flex-wrap">
         @if (!string.IsNullOrEmpty(searchedExerciseName))
         {
             <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearSearchFilter">@searchedExerciseName <Icon Name="IconName.X" /></Badge>

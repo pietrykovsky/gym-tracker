@@ -24,11 +24,11 @@ public class PlanGeneratorService : IPlanGeneratorService
         {
             // Untrained individuals benefit most from full body workouts (3 days per week optimal)
             (ExperienceLevel.Untrained, _) => WorkoutType.FullBody,
-            
+
             // Trained individuals can handle split routines
             // With limited frequency (1-2 days), upper/lower split is more efficient
             (ExperienceLevel.Trained, <= 2) => WorkoutType.UpperLower,
-            
+
             // For higher frequencies and advanced trainees, push/pull/legs allows more volume and better recovery
             _ => WorkoutType.PushPull
         };
@@ -56,7 +56,7 @@ public class PlanGeneratorService : IPlanGeneratorService
     {
         // Prioritize compound movements based on research
         var exercises = new List<ExerciseBase>();
-        
+
         // Core compound movements first
         exercises.AddRange(GetExercisesByCategory(availableExercises, "Legs", 2)); // Squats, deadlifts
         exercises.AddRange(GetExercisesByCategory(availableExercises, "Chest", 1)); // Bench variations
@@ -78,7 +78,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         int restPeriod)
     {
         var activities = new List<PlanActivity>();
-        
+
         // Create activities for each exercise
         foreach (var exercise in exercises)
         {
@@ -149,7 +149,7 @@ public class PlanGeneratorService : IPlanGeneratorService
     private static int GetExerciseComplexityScore(ExerciseBase exercise)
     {
         var score = 0;
-        
+
         // Compound movements get higher priority
         if (exercise.GetMovementType() == MovementType.Compound)
             score += 100;
@@ -193,7 +193,7 @@ public class PlanGeneratorService : IPlanGeneratorService
             case PushPullWorkoutDay.Push:
                 // Primary: Chest compound movements (bench variations, dips)
                 exercises.AddRange(GetPrimaryCompoundExercises(filtered, "Chest", compoundCount));
-                
+
                 // Supporting: Triceps isolation (pushdowns, extensions)
                 exercises.AddRange(GetIsolationExercises(filtered, "Triceps", isolationCount));
                 break;
@@ -201,7 +201,7 @@ public class PlanGeneratorService : IPlanGeneratorService
             case PushPullWorkoutDay.Pull:
                 // Primary: Back compound movements (rows, pulldowns)
                 exercises.AddRange(GetPrimaryCompoundExercises(filtered, "Back", compoundCount));
-                
+
                 // Supporting: Biceps isolation (curls)
                 exercises.AddRange(GetIsolationExercises(filtered, "Biceps", isolationCount));
                 break;
@@ -209,7 +209,7 @@ public class PlanGeneratorService : IPlanGeneratorService
             case PushPullWorkoutDay.Legs:
                 // Primary: Leg compound movements (squats, deadlifts)
                 exercises.AddRange(GetPrimaryCompoundExercises(filtered, "Legs", compoundCount));
-                
+
                 // Supporting: Core/isolation movements
                 exercises.AddRange(GetIsolationExercises(filtered, "Core", isolationCount));
                 break;
@@ -248,10 +248,10 @@ public class PlanGeneratorService : IPlanGeneratorService
                 // Horizontal push/pull (chest/back)
                 exercises.AddRange(GetPrimaryCompoundExercises(filtered, "Chest", compoundCount / 2));
                 exercises.AddRange(GetPrimaryCompoundExercises(filtered, "Back", compoundCount / 2));
-                
+
                 // Vertical push/pull (shoulders/lats)
                 exercises.AddRange(GetPrimaryCompoundExercises(filtered, "Shoulders", 1));
-                
+
                 // Isolation for arms (synergistic muscles)
                 exercises.AddRange(GetIsolationExercises(filtered, "Triceps", isolationCount));
                 exercises.AddRange(GetIsolationExercises(filtered, "Biceps", isolationCount));
@@ -260,7 +260,7 @@ public class PlanGeneratorService : IPlanGeneratorService
             case UpperLowerWorkoutDay.Lower:
                 // Primary compound leg movements
                 exercises.AddRange(GetPrimaryCompoundExercises(filtered, "Legs", compoundCount));
-                
+
                 // Core/stabilizers
                 exercises.AddRange(GetIsolationExercises(filtered, "Core", isolationCount));
                 exercises.AddRange(GetIsolationExercises(filtered, "Glutes", 1));
@@ -276,8 +276,8 @@ public class PlanGeneratorService : IPlanGeneratorService
         int count)
     {
         return exercises
-            .Where(e => 
-                e.GetMovementType() == MovementType.Compound && 
+            .Where(e =>
+                e.GetMovementType() == MovementType.Compound &&
                 e.PrimaryCategory.Name == primaryCategory)
             .OrderByDescending(GetExerciseComplexityScore)
             .Take(count)
@@ -290,7 +290,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         int count)
     {
         return exercises
-            .Where(e => 
+            .Where(e =>
                 e.GetMovementType() == MovementType.Isolation &&
                 (e.PrimaryCategory.Name == targetCategory ||
                  (e is DefaultExercise defaultEx && defaultEx.Categories.Any(c => c.Name == targetCategory)) ||
@@ -325,7 +325,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         WorkoutType workoutType)
     {
         var categories = new List<TrainingPlanCategory>();
-        
+
         // Add workout type category
         categories.AddRange(workoutType switch
         {
@@ -339,7 +339,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         categories.AddRange(goal switch
         {
             TrainingGoal.Strength => allCategories.Where(c => c.Name == "Strength"),
-            TrainingGoal.Endurance => allCategories.Where(c => 
+            TrainingGoal.Endurance => allCategories.Where(c =>
                 c.Name is "Endurance"),
             _ => Enumerable.Empty<TrainingPlanCategory>()
         });
@@ -359,7 +359,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         var allExercises = new List<ExerciseBase>();
         var userExercises = await _userExerciseService.GetUserExercisesAsync(userId);
         var defaultExercises = await _defaultExerciseService.GetAllExercisesAsync();
-        
+
         allExercises.AddRange(userExercises);
         allExercises.AddRange(defaultExercises);
 
@@ -373,9 +373,9 @@ public class PlanGeneratorService : IPlanGeneratorService
         var selectedExercises = workoutType switch
         {
             WorkoutType.FullBody => SelectExercisesForFullBody(availableExercises),
-            WorkoutType.UpperLower when upperLowerDay.HasValue => 
+            WorkoutType.UpperLower when upperLowerDay.HasValue =>
                 SelectExercisesForWorkout(availableExercises, upperLowerDay.Value, experience),
-            WorkoutType.PushPull when pushPullDay.HasValue => 
+            WorkoutType.PushPull when pushPullDay.HasValue =>
                 SelectExercisesForWorkout(availableExercises, pushPullDay.Value, experience),
             _ => throw new ArgumentException("Invalid workout configuration")
         };
@@ -385,7 +385,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         var planCategories = GetPlanCategories(categories, goal, workoutType);
 
         var dayType = pushPullDay?.ToString() ?? upperLowerDay?.ToString() ?? "Full Body";
-        
+
         return new UserMadeTrainingPlan
         {
             UserId = userId,
@@ -414,26 +414,26 @@ public class PlanGeneratorService : IPlanGeneratorService
             (TrainingGoal.Strength, ExperienceLevel.Untrained) => 0.65f, // 60-70% 1RM
             (TrainingGoal.Strength, ExperienceLevel.Trained) => 0.75f,   // 70-80% 1RM
             (TrainingGoal.Strength, ExperienceLevel.Advanced) => 0.85f,  // 80-90% 1RM
-            
+
             // Hypertrophy focus
             (TrainingGoal.Hypertrophy, ExperienceLevel.Untrained) => 0.65f, // 60-70% 1RM
             (TrainingGoal.Hypertrophy, ExperienceLevel.Trained) => 0.75f,   // 70-80% 1RM
             (TrainingGoal.Hypertrophy, ExperienceLevel.Advanced) => 0.75f,  // 75-85% 1RM
-            
+
             // Endurance focus
             (TrainingGoal.Endurance, _) => 0.55f, // 50-60% 1RM
-            
+
             _ => 0.65f // Default to beginner range if something goes wrong
         };
 
         foreach (var activity in plan.Activities)
         {
-            if (activity.Exercise?.RequiredEquipment != Equipment.None && 
+            if (activity.Exercise?.RequiredEquipment != Equipment.None &&
                 repMaxes.TryGetValue(activity.ExerciseId, out var repMax) &&
                 repMax > 0)
             {
                 var recommendedWeight = repMax * percentage;
-                
+
                 // Round to nearest 2.5kg for practical purposes
                 recommendedWeight = MathF.Round(recommendedWeight / 2.5f) * 2.5f;
 

@@ -39,9 +39,12 @@
                         </select>
                     </div>
 
-                    <!-- Create Button -->
                     <Button Color="ButtonColor.Primary" @onclick="ShowCreateModal">
-                        <Icon Name="IconName.Plus"/> New Plan
+                        <Icon Name="IconName.Plus"/> Create Training Plan
+                    </Button>
+
+                    <Button Color="ButtonColor.Primary" @onclick="ShowGenerateModal">
+                        <Icon Name="IconName.Plus"/> Generate Training Plan
                     </Button>
                 </div>
             </div>
@@ -136,6 +139,7 @@
 
 <CreateUpdateTrainingPlanModal @ref="planModal" Categories="@categories" OnSave="HandlePlanSaved" />
 <DetailPlanModal @ref="detailPlanModal" />
+<TrainingPlanGenerationModal @ref="generatePlanModal" OnSave="HandlePlanSaved" />
 
 @code {
     private bool isLoading = true;
@@ -155,6 +159,7 @@
     private ConfirmDialog dialog = default!;
     private CreateUpdateTrainingPlanModal planModal = default!;
     private DetailPlanModal detailPlanModal = default!;
+    private TrainingPlanGenerationModal generatePlanModal = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -250,6 +255,14 @@
         if (planModal is not null)
         {
             await planModal.Show();
+        }
+    }
+
+    private async Task ShowGenerateModal()
+    {
+        if (generatePlanModal is not null)
+        {
+            await generatePlanModal.Show();
         }
     }
 

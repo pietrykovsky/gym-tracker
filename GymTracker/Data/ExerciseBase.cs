@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GymTracker.Data;
 
@@ -14,6 +15,15 @@ public abstract class ExerciseBase
     [Required]
     public ExerciseDifficulty Difficulty { get; set; } = ExerciseDifficulty.Beginner;
 
+    [Required]
+    public Equipment RequiredEquipment { get; set; } = Equipment.None;
+
     [StringLength(200, ErrorMessage = "Description must be less than 200 characters.")]
     public string? Description { get; set; } = string.Empty;
+
+    [Required]
+    public int PrimaryCategoryId { get; set; }
+    public ExerciseCategory PrimaryCategory { get; set; } = null!;
+
+    public abstract MovementType GetMovementType();
 }

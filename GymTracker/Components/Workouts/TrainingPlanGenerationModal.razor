@@ -1,0 +1,374 @@
+﻿@using GymTracker.Data
+@using GymTracker.Services
+@using System.Security.Claims
+@using BlazorBootstrap
+@using Microsoft.AspNetCore.Identity
+
+@namespace GymTracker.Components.Workouts
+
+@inject IPlanGeneratorService PlanGeneratorService
+@inject IUserMadeTrainingPlanService UserTrainingPlanService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<Modal @ref="modal" Size="ModalSize.Large" Title="Generate Training Plan" IsVerticallyCentered="true" IsScrollable="true">
+    <BodyTemplate>
+        @if (currentStep == GenerationStep.Initial)
+        {
+            <EditForm Model="@parameters" OnValidSubmit="HandleInitialSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <InputSelect class="form-select" @bind-Value="parameters.TrainingGoal">
+                                <option value="@TrainingGoal.Strength">Strength</option>
+                                <option value="@TrainingGoal.Hypertrophy">Muscle Growth</option>
+                                <option value="@TrainingGoal.Endurance">Endurance</option>
+                            </InputSelect>
+                            <label>Training Focus</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <InputSelect class="form-select" @bind-Value="parameters.ExperienceLevel">
+                                @foreach (var level in Enum.GetValues<ExperienceLevel>())
+                                {
+                                    <option value="@level">@level</option>
+                                }
+                            </InputSelect>
+                            <label>Training Experience</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <InputSelect class="form-select" @bind-Value="parameters.TrainingDays">
+                                @for (int i = 1; i <= 6; i++)
+                                {
+                                    <option value="@i">@i days per week</option>
+                                }
+                            </InputSelect>
+                            <label>Training Frequency</label>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Available Equipment</label>
+                        <div class="row g-2">
+                            @{
+                                var equipmentValues = Enum.GetValues<Equipment>().ToList();
+                            }
+                            @foreach (var equipment in equipmentValues)
+                            {
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               checked="@selectedEquipment.Contains(equipment)"
+                                               @onchange="@(e => ToggleEquipment(equipment, e.Value is bool value && value))" />
+                                        <label class="form-check-label">@(equipment == Equipment.None ? "Bodyweight" : equipment)</label>
+                                    </div>
+                                </div>
+                            }
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox"
+                                           checked="@(selectedEquipment.SetEquals(equipmentValues.ToHashSet()))"
+                                           @onchange="@(e => ToggleAllEquipment(e.Value is bool value && value))" />
+                                    <label class="form-check-label">Select all</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row text-body-secondary justify-content-center">* exercises with no equipment are selected by default</div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <Button Color="ButtonColor.Secondary" @onclick="HandleCancel">Cancel</Button>
+                    <Button Color="ButtonColor.Primary" Type="ButtonType.Submit" 
+                            Disabled="@(!selectedEquipment.Any())">Next</Button>
+                </div>
+            </EditForm>
+        }
+        else if (currentStep == GenerationStep.DaySelection)
+        {
+            <div class="row g-3">
+                <div class="col-12">
+                    <h5>Based on your selections, we recommend a @workoutType.ToString() workout.</h5>
+                    <p class="text-muted">@GetWorkoutTypeDescription(workoutType)</p>
+
+                    @if (workoutType == WorkoutType.UpperLower)
+                    {
+                        <div class="form-group">
+                            <label class="form-label">Select workout day type:</label>
+                            <InputSelect class="form-select" @bind-Value="selectedUpperLowerDay">
+                                <option value="@UpperLowerWorkoutDay.Upper">Upper Body</option>
+                                <option value="@UpperLowerWorkoutDay.Lower">Lower Body</option>
+                            </InputSelect>
+                        </div>
+                    }
+                    else if (workoutType == WorkoutType.PushPull)
+                    {
+                        <div class="form-group">
+                            <label class="form-label">Select workout day type:</label>
+                            <InputSelect class="form-select" @bind-Value="selectedPushPullDay">
+                                <option value="@PushPullWorkoutDay.Push">Push</option>
+                                <option value="@PushPullWorkoutDay.Pull">Pull</option>
+                                <option value="@PushPullWorkoutDay.Legs">Legs</option>
+                            </InputSelect>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <Button Color="ButtonColor.Secondary" @onclick="HandleBack">Back</Button>
+                <Button Color="ButtonColor.Primary" @onclick="HandleDaySelectionSubmit">Next</Button>
+            </div>
+        }
+        else if (currentStep == GenerationStep.RepMaxInput)
+        {
+            <div class="row g-3">
+                <div class="col-12">
+                    <h5>Optionally provide your one repetition maximum (1RM) for exercises:</h5>
+                    <p class="text-muted">This will help us recommend appropriate weights. Skip if unsure.</p>
+
+                    @foreach (var exercise in selectedExercises.Where(e => e.RequiredEquipment != Equipment.None))
+                    {
+                        var exerciseId = exercise.Id;
+                        <div class="form-floating mb-3">
+                            <input type="number" class="form-control" 
+                                   @bind="@repMaxes[exerciseId]"
+                                   step="2.5" />
+                            <label>@exercise.Name (kg)</label>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <Button Color="ButtonColor.Secondary" @onclick="HandleBack">Back</Button>
+                <Button Color="ButtonColor.Primary" @onclick="GeneratePlan">Generate Plan</Button>
+            </div>
+        }
+        else if (currentStep == GenerationStep.Review)
+        {
+            <div class="row g-3">
+                <div class="col-12">
+                    <h5>@generatedPlan!.Name</h5>
+                    <p class="text-muted">@generatedPlan.Description</p>
+
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        @foreach (var category in generatedPlan.Categories)
+                        {
+                            <Badge Color="BadgeColor.Primary">@category.Name</Badge>
+                        }
+                    </div>
+
+                    <div class="list-group">
+                        @foreach (var activity in generatedPlan.Activities.OrderBy(a => a.Order))
+                        {
+                            <div class="list-group-item">
+                                <h6>@activity.Exercise?.Name</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Set</th>
+                                                <th>Reps</th>
+                                                <th>Weight</th>
+                                                <th>Rest</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var set in activity.Sets.OrderBy(s => s.Order))
+                                            {
+                                                <tr>
+                                                    <td>@set.Order</td>
+                                                    <td>@set.Repetitions</td>
+                                                    <td>
+                                                        @if (activity.Exercise?.RequiredEquipment != Equipment.None &&
+                                                             repMaxes.ContainsKey(activity.Exercise?.Id ?? 0) && repMaxes[activity.Exercise?.Id ?? 0] > 0)
+                                                        {
+                                                            <text>@set.Weight kg</text>
+                                                        }
+                                                        else
+                                                        {
+                                                            <text>-</text>
+                                                        }
+                                                    </td>
+                                                    <td>@set.RestAfterDuration seconds</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <Button Color="ButtonColor.Secondary" @onclick="HandleBack">Back</Button>
+                <Button Color="ButtonColor.Primary" @onclick="SavePlan">Save Plan</Button>
+            </div>
+        }
+    </BodyTemplate>
+</Modal>
+
+@code {
+    private enum GenerationStep
+    {
+        Initial,
+        DaySelection,
+        RepMaxInput,
+        Review
+    }
+
+    private Modal modal = default!;
+    private GenerationStep currentStep = GenerationStep.Initial;
+    private WorkoutType workoutType;
+    private UpperLowerWorkoutDay? selectedUpperLowerDay = UpperLowerWorkoutDay.Upper;
+    private PushPullWorkoutDay? selectedPushPullDay = PushPullWorkoutDay.Push;
+    private HashSet<Equipment> selectedEquipment = new() { Equipment.None };
+    private List<ExerciseBase> selectedExercises = new();
+    private Dictionary<int, float> repMaxes = new();
+    private UserMadeTrainingPlan? generatedPlan;
+    private string? userId;
+
+    private GenerationParameters parameters = new();
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    public async Task Show()
+    {
+        currentStep = GenerationStep.Initial;
+        parameters = new() { TrainingGoal = TrainingGoal.Strength, ExperienceLevel = ExperienceLevel.Untrained, TrainingDays = 3 };
+        selectedEquipment = new() { Equipment.None };
+        selectedExercises.Clear();
+        repMaxes.Clear();
+        await modal.ShowAsync();
+    }
+
+    private void ToggleEquipment(Equipment equipment, bool isSelected)
+    {
+        if (isSelected)
+            selectedEquipment.Add(equipment);
+        else
+            selectedEquipment.Remove(equipment);
+    }
+
+    private void ToggleAllEquipment(bool isSelected)
+    {
+        var equipmentValues = Enum.GetValues<Equipment>().Except(new[] { Equipment.None });
+        if (isSelected)
+        {
+            selectedEquipment = new HashSet<Equipment>(equipmentValues) { Equipment.None };
+        }
+        else
+        {
+            selectedEquipment = new() { Equipment.None };
+        }
+    }
+
+    private Task HandleCancel() => modal.HideAsync();
+
+    private void HandleBack()
+    {
+        currentStep = currentStep switch
+        {
+            GenerationStep.DaySelection => GenerationStep.Initial,
+            GenerationStep.RepMaxInput => GenerationStep.DaySelection,
+            GenerationStep.Review => GenerationStep.RepMaxInput,
+            _ => GenerationStep.Initial
+        };
+    }
+
+    private void HandleInitialSubmit()
+    {
+        workoutType = PlanGeneratorService.GetWorkoutType(
+            parameters.ExperienceLevel, 
+            parameters.TrainingDays);
+
+        currentStep = GenerationStep.DaySelection;
+    }
+
+    private async Task HandleDaySelectionSubmit()
+    {
+        if (string.IsNullOrEmpty(userId)) return;
+
+        generatedPlan = await PlanGeneratorService.GenerateTrainingPlanAsync(
+            userId,
+            parameters.TrainingGoal,
+            parameters.ExperienceLevel,
+            parameters.TrainingDays,
+            selectedEquipment,
+            selectedPushPullDay,
+            selectedUpperLowerDay);
+
+        selectedExercises = generatedPlan.Activities
+            .Where(a => a.Exercise?.RequiredEquipment != Equipment.None)
+            .Select(a => a.Exercise!)
+            .ToList();
+
+        // Initialize dictionary keys for all exercises that need 1RM
+        repMaxes = selectedExercises
+            .ToDictionary(e => e.Id, _ => 0f);
+
+        currentStep = selectedExercises.Any() 
+            ? GenerationStep.RepMaxInput 
+            : GenerationStep.Review;
+    }
+
+    private void GeneratePlan()
+    {
+        if (string.IsNullOrEmpty(userId) || generatedPlan == null) return;
+
+        // Update weights before saving if rep maxes were provided
+        if (repMaxes.Any(rm => rm.Value > 0))
+        {
+            PlanGeneratorService.UpdatePlanWithWeights(
+                generatedPlan,
+                repMaxes,
+                parameters.TrainingGoal,
+                parameters.ExperienceLevel);
+        }
+
+        currentStep = GenerationStep.Review;
+    }
+
+    private async Task SavePlan()
+    {
+        if (string.IsNullOrEmpty(userId) || generatedPlan == null) return;
+        var categoryIds = generatedPlan.Categories.Select(c => c.Id).ToList();
+        await UserTrainingPlanService.CreateUserPlanAsync(userId, generatedPlan, categoryIds);
+
+        await modal.HideAsync();
+        await OnSave.InvokeAsync();
+    }
+
+    private class GenerationParameters
+    {
+        public TrainingGoal TrainingGoal { get; set; }
+        public ExperienceLevel ExperienceLevel { get; set; }
+        public int TrainingDays { get; set; }
+    }
+
+    private static string GetWorkoutTypeDescription(WorkoutType type) =>
+        type switch
+        {
+            WorkoutType.FullBody => "Full body workouts are optimal for beginners, providing frequent exposure to exercises and maximizing recovery between sessions.",
+            WorkoutType.UpperLower => "Upper/Lower splits allow for higher volume per muscle group while maintaining adequate recovery, ideal for intermediate trainees.",
+            WorkoutType.PushPull => "Push/Pull/Legs split enables high volume and frequency while grouping synergistic muscle groups together, perfect for advanced trainees.",
+            _ => string.Empty
+        };
+}

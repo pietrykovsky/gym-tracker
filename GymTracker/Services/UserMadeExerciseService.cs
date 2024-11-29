@@ -17,6 +17,7 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.UserMadeExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .Where(e => e.UserId == userId)
             .OrderBy(e => e.Name)
@@ -28,6 +29,7 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.UserMadeExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .Where(e => e.UserId == userId && e.Categories.Any(c => c.Id == categoryId))
             .OrderBy(e => e.Name)
@@ -39,6 +41,7 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.UserMadeExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .Where(e => e.UserId == userId && e.Difficulty == difficulty)
             .OrderBy(e => e.Name)
@@ -50,6 +53,7 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
         return await context.UserMadeExercises
             .AsNoTracking()
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .FirstOrDefaultAsync(e => e.UserId == userId && e.Id == exerciseId);
     }
@@ -85,6 +89,7 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         using var context = await _contextFactory.CreateDbContextAsync();
 
         var exercise = await context.UserMadeExercises
+            .Include(e => e.PrimaryCategory)
             .Include(e => e.Categories)
             .FirstOrDefaultAsync(e => e.UserId == userId && e.Id == exerciseId);
 
@@ -103,6 +108,8 @@ public class UserMadeExerciseService : IUserMadeExerciseService
         exercise.Name = updatedExercise.Name;
         exercise.Description = updatedExercise.Description;
         exercise.Difficulty = updatedExercise.Difficulty;
+        exercise.RequiredEquipment = updatedExercise.RequiredEquipment;
+        exercise.PrimaryCategoryId = updatedExercise.PrimaryCategoryId;
         exercise.Categories.Clear();
 
         foreach (var category in categories)

@@ -1,0 +1,7 @@
+::deep div.autocomplete {
+  height: 100% !important;
+}
+
+::deep div.input-group {
+  height: 100% !important;
+}

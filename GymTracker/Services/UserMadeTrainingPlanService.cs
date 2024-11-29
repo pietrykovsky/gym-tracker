@@ -61,31 +61,42 @@ public class UserMadeTrainingPlanService : IUserMadeTrainingPlanService
     {
         using var context = await _contextFactory.CreateDbContextAsync();
 
+        // Fetch fresh categories from database instead of using the ones in plan object
         var categories = await context.TrainingPlanCategories
             .Where(c => categoryIds.Contains(c.Id))
             .ToListAsync();
 
-        if (categories.Count == 0)
+        // Create new plan without categories first
+        var newPlan = new UserMadeTrainingPlan
         {
-            throw new ArgumentException("At least one valid category must be provided.");
-        }
+            UserId = userId,
+            Name = plan.Name,
+            Description = plan.Description,
+            Categories = categories  // Use freshly loaded categories
+        };
 
-        plan.UserId = userId;
-        plan.Categories = categories;
-
+        // Add activities and sets
         foreach (var activity in plan.Activities)
         {
-            activity.Order = plan.Activities.IndexOf(activity) + 1;
-            foreach (var set in activity.Sets)
+            var newActivity = new PlanActivity
             {
-                set.Order = activity.Sets.IndexOf(set) + 1;
-            }
+                Order = activity.Order,
+                ExerciseId = activity.ExerciseId,
+                Sets = activity.Sets.Select(s => new ExerciseSet
+                {
+                    Order = s.Order,
+                    Repetitions = s.Repetitions,
+                    Weight = s.Weight,
+                    RestAfterDuration = s.RestAfterDuration
+                }).ToList()
+            };
+            newPlan.Activities.Add(newActivity);
         }
 
-        await context.UserMadeTrainingPlans.AddAsync(plan);
+        await context.UserMadeTrainingPlans.AddAsync(newPlan);
         await context.SaveChangesAsync();
 
-        return plan;
+        return newPlan;
     }
 
     public async Task<UserMadeTrainingPlan?> UpdateUserPlanAsync(

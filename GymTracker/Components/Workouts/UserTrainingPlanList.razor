@@ -13,52 +13,53 @@
 <ConfirmDialog @ref="dialog" />
 
 <div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center mt-4 mb-2">
-                <!-- Search -->
-                <div class="flex-grow-1">
-                    <AutoComplete @bind-Value="searchedPlanName"
-                                TItem="UserMadeTrainingPlan"
-                                DataProvider="PlansDataProvider"
-                                PropertyName="Name"
-                                Placeholder="Search training plans..."
-                                OnChanged="FilterPlans" />
-                </div>
+    <div class="row my-2">
+        <!-- Search -->
+        <div class="col-md-8 col-lg-3 col-xxl-4 mb-1">
+            <AutoComplete @bind-Value="searchedPlanName"
+                        TItem="UserMadeTrainingPlan"
+                        DataProvider="PlansDataProvider"
+                        PropertyName="Name"
+                        Placeholder="Search training plans..."
+                        OnChanged="FilterPlans" />
+        </div>
 
-                <!-- Filters -->
-                <div class="d-flex gap-3 flex-wrap">
-                    <!-- Category Filter -->
-                    <div class="form-group">
-                        <select class="form-select" @bind="selectedCategoryId" @bind:after="FilterPlans">
-                            <option value="0">All Categories</option>
-                            @foreach (var category in categories)
-                            {
-                                <option value="@category.Id">@category.Name</option>
-                            }
-                        </select>
-                    </div>
-
-                    <!-- Create Button -->
-                    <Button Color="ButtonColor.Primary" @onclick="ShowCreateModal">
-                        <Icon Name="IconName.Plus"/> New Plan
-                    </Button>
-                </div>
+        <!-- Filters -->
+        <div class="col-md-4 col-lg-auto col-xxl-2 mb-1">
+            <!-- Category Filter -->
+            <div class="form-group">
+                <select class="form-select" @bind="selectedCategoryId" @bind:after="FilterPlans">
+                    <option value="0">All Categories</option>
+                    @foreach (var category in categories)
+                    {
+                        <option value="@category.Id">@category.Name</option>
+                    }
+                </select>
             </div>
-            <div class="d-flex flex-column flex-md-row gap-3 align-items-start align-items-md-center">
-                @if (!string.IsNullOrEmpty(searchedPlanName))
-                {
-                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearSearchFilter">
-                        @searchedPlanName <Icon Name="IconName.X" />
-                    </Badge>
-                }
-                @if (selectedCategoryId > 0)
-                {
-                    <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearCategoryFilter">
-                        @categories.Find(c => c.Id == selectedCategoryId)?.Name <Icon Name="IconName.X" />
-                    </Badge>
-                }
-            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 col-xxl-3 mb-1">
+            <Button Color="ButtonColor.Primary" @onclick="ShowCreateModal" class="w-100">
+                <Icon Name="IconName.Plus"/> Create Training Plan
+            </Button>
+        </div>
+        <div class="col-md-6 col-lg-auto col-xxl-3 mb-1">
+            <Button Color="ButtonColor.Primary" @onclick="ShowGenerateModal" class="w-100">
+                <Icon Name="IconName.Plus"/> Generate Training Plan
+            </Button>
+        </div>
+        <div class="d-flex flex-md-row gap-3 align-items-start align-items-md-center flex-wrap">
+            @if (!string.IsNullOrEmpty(searchedPlanName))
+            {
+                <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearSearchFilter">
+                    @searchedPlanName <Icon Name="IconName.X" />
+                </Badge>
+            }
+            @if (selectedCategoryId > 0)
+            {
+                <Badge Color="BadgeColor.Light" IndicatorType="BadgeIndicatorType.RoundedPill" @onclick="ClearCategoryFilter">
+                    @categories.Find(c => c.Id == selectedCategoryId)?.Name <Icon Name="IconName.X" />
+                </Badge>
+            }
         </div>
     </div>
 
@@ -136,6 +137,7 @@
 
 <CreateUpdateTrainingPlanModal @ref="planModal" Categories="@categories" OnSave="HandlePlanSaved" />
 <DetailPlanModal @ref="detailPlanModal" />
+<TrainingPlanGenerationModal @ref="generatePlanModal" OnSave="HandlePlanSaved" />
 
 @code {
     private bool isLoading = true;
@@ -155,6 +157,7 @@
     private ConfirmDialog dialog = default!;
     private CreateUpdateTrainingPlanModal planModal = default!;
     private DetailPlanModal detailPlanModal = default!;
+    private TrainingPlanGenerationModal generatePlanModal = default!;
 
     protected override async Task OnInitializedAsync()
     {
@@ -250,6 +253,14 @@
         if (planModal is not null)
         {
             await planModal.Show();
+        }
+    }
+
+    private async Task ShowGenerateModal()
+    {
+        if (generatePlanModal is not null)
+        {
+            await generatePlanModal.Show();
         }
     }
 

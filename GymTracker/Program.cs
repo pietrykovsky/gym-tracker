@@ -70,6 +70,7 @@ builder.Services.AddScoped<IPlanActivityService, PlanActivityService>();
 builder.Services.AddScoped<ITrainingSessionService, TrainingSessionService>();
 builder.Services.AddScoped<ITrainingActivityService, TrainingActivityService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<IPlanGeneratorService, PlanGeneratorService>();
 
 builder.Services.AddScoped<DatabaseSeederService>();
 

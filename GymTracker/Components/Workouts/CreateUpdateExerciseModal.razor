@@ -37,6 +37,26 @@
             </div>
 
             <div class="mb-3">
+                <label class="form-label">Required equipment</label>
+                <InputSelect class="form-select" @bind-Value="exercise.RequiredEquipment">
+                    @foreach (var equipment in Enum.GetValues<Equipment>())
+                    {
+                        <option value="@equipment">@equipment</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Primary muscle group</label>
+                <InputSelect class="form-select" @bind-Value="exercise.PrimaryCategoryId">
+                    @foreach (var muscleGroup in Categories)
+                    {
+                        <option value="@muscleGroup.Id">@muscleGroup.Name</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="mb-3">
                 <label class="form-label">Categories</label>
                 <div class="row g-3">
                     @if (Categories != null && selectedCategories != null)
@@ -47,7 +67,7 @@
                             <div class="col-md-4">
                                 <div class="form-check">
                                     <InputCheckbox class="form-check-input" 
-                                                 @bind-Value="selectedCategories[categoryId]" />
+                                                 @bind-Value="selectedCategories[categoryId]"  />
                                     <label class="form-check-label">
                                         @category.Name
                                     </label>
@@ -56,10 +76,6 @@
                         }
                     }
                 </div>
-                @if (selectedCategories?.Any(x => x.Value) != true)
-                {
-                    <div class="text-danger small mt-2">At least one category must be selected</div>
-                }
             </div>
 
             <div class="modal-footer px-0 pb-0">
@@ -120,12 +136,15 @@
                 Name = existingExercise.Name,
                 Description = existingExercise.Description,
                 Difficulty = existingExercise.Difficulty,
+                RequiredEquipment = existingExercise.RequiredEquipment,
+                PrimaryCategoryId = existingExercise.PrimaryCategoryId,
                 UserId = existingExercise.UserId,
                 Categories = existingExercise.Categories.ToList()
             }
             : new UserMadeExercise
             {
-                UserId = userId!
+                UserId = userId!,
+                PrimaryCategoryId = Categories?.FirstOrDefault()?.Id ?? 0
             };
 
         InitializeSelectedCategories();

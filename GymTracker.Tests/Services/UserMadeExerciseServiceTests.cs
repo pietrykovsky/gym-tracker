@@ -26,8 +26,10 @@ public class UserMadeExerciseServiceTests
 
     private void SeedData()
     {
-        var category1 = new ExerciseCategory { Id = 1, Name = "Category1" };
-        var category2 = new ExerciseCategory { Id = 2, Name = "Category2" };
+        var category1 = new ExerciseCategory { Id = 1, Name = "Primary" };
+        var category2 = new ExerciseCategory { Id = 2, Name = "Other1" };
+        var category3 = new ExerciseCategory { Id = 3, Name = "Other2" };
+
 
         _dbContext.ExerciseCategories.AddRange(category1, category2);
 
@@ -38,7 +40,8 @@ public class UserMadeExerciseServiceTests
                 Name = "Exercise1",
                 UserId = "user1",
                 Difficulty = ExerciseDifficulty.Beginner,
-                Categories = new List<ExerciseCategory> { category1 }
+                RequiredEquipment = Equipment.Barbell,
+                PrimaryCategoryId = category1.Id,
             },
             new UserMadeExercise
             {
@@ -46,7 +49,9 @@ public class UserMadeExerciseServiceTests
                 Name = "Exercise2",
                 UserId = "user1",
                 Difficulty = ExerciseDifficulty.Intermediate,
-                Categories = new List<ExerciseCategory> { category1, category2 }
+                RequiredEquipment = Equipment.Dumbbell,
+                PrimaryCategoryId = category1.Id,
+                Categories = new List<ExerciseCategory> { category2 }
             },
             new UserMadeExercise
             {
@@ -54,7 +59,9 @@ public class UserMadeExerciseServiceTests
                 Name = "Exercise3",
                 UserId = "user2",
                 Difficulty = ExerciseDifficulty.Advanced,
-                Categories = new List<ExerciseCategory> { category2 }
+                RequiredEquipment = Equipment.ResistanceBand,
+                PrimaryCategoryId = category1.Id,
+                Categories = new List<ExerciseCategory> { category2, category3 }
             }
         );
 
@@ -77,11 +84,11 @@ public class UserMadeExerciseServiceTests
     public async Task GetUserExercisesByCategoryAsync_ReturnsExercisesInCategory()
     {
         // Act
-        var result = await _sut.GetUserExercisesByCategoryAsync("user1", 1);
+        var result = await _sut.GetUserExercisesByCategoryAsync("user1", 2);
 
         // Assert
-        result.Should().HaveCount(2);
-        result.All(e => e.Categories.Any(c => c.Id == 1)).Should().BeTrue();
+        result.Should().HaveCount(1);
+        result.All(e => e.Categories.Any(c => c.Id == 2)).Should().BeTrue();
         result.All(e => e.UserId == "user1").Should().BeTrue();
     }
 
@@ -101,13 +108,13 @@ public class UserMadeExerciseServiceTests
     public async Task GetUserExerciseByIdAsync_ReturnsCorrectExercise()
     {
         // Act
-        var result = await _sut.GetUserExerciseByIdAsync("user1", 1);
+        var result = await _sut.GetUserExerciseByIdAsync("user2", 3);
 
         // Assert
         result.Should().NotBeNull();
-        result!.Name.Should().Be("Exercise1");
-        result.UserId.Should().Be("user1");
-        result.Categories.Should().HaveCount(1);
+        result!.Name.Should().Be("Exercise3");
+        result.UserId.Should().Be("user2");
+        result.Categories.Should().HaveCount(2);
     }
 
     [Fact]
@@ -155,7 +162,9 @@ public class UserMadeExerciseServiceTests
         {
             Name = "UpdatedExercise",
             Description = "Updated description",
-            Difficulty = ExerciseDifficulty.Advanced
+            Difficulty = ExerciseDifficulty.Advanced,
+            RequiredEquipment = Equipment.None,
+            PrimaryCategoryId = 2
         };
 
         // Act
@@ -166,6 +175,8 @@ public class UserMadeExerciseServiceTests
         result!.Name.Should().Be("UpdatedExercise");
         result.Description.Should().Be("Updated description");
         result.Difficulty.Should().Be(ExerciseDifficulty.Advanced);
+        result.RequiredEquipment.Should().Be(Equipment.None);
+        result.PrimaryCategoryId.Should().Be(2);
         result.Categories.Should().HaveCount(1);
         result.Categories.First().Id.Should().Be(2);
     }
@@ -250,12 +261,12 @@ public class UserMadeExerciseServiceTests
     public async Task GetUserExercisesByCategoryAsync_WithNoMatchingExercises_ReturnsEmptyList()
     {
         // Arrange
-        var newCategory = new ExerciseCategory { Id = 3, Name = "EmptyCategory" };
+        var newCategory = new ExerciseCategory { Id = 4, Name = "EmptyCategory" };
         await _dbContext.ExerciseCategories.AddAsync(newCategory);
         await _dbContext.SaveChangesAsync();
 
         // Act
-        var result = await _sut.GetUserExercisesByCategoryAsync("user1", 3);
+        var result = await _sut.GetUserExercisesByCategoryAsync("user1", 4);
 
         // Assert
         result.Should().BeEmpty();

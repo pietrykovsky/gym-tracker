@@ -30,27 +30,226 @@ public class PlanGeneratorService : IPlanGeneratorService
             (ExperienceLevel.Trained, <= 2) => WorkoutType.UpperLower,
 
             // For higher frequencies and advanced trainees, push/pull/legs allows more volume and better recovery
+            // Split is superior
             _ => WorkoutType.PushPull
         };
 
-    private static (int sets, int reps, int rest) GetTrainingParameters(TrainingGoal goal, ExperienceLevel experience) =>
-        (goal, experience) switch
+    public async Task<UserMadeTrainingPlan> GenerateTrainingPlanAsync(
+        string userId,
+        TrainingGoal goal,
+        ExperienceLevel experience,
+        int trainingDays,
+        IEnumerable<Equipment> availableEquipment,
+        PushPullWorkoutDay? pushPullDay = null,
+        UpperLowerWorkoutDay? upperLowerDay = null)
+    {
+        var allExercises = new List<ExerciseBase>();
+        var userExercises = await _userExerciseService.GetUserExercisesAsync(userId);
+        var defaultExercises = await _defaultExerciseService.GetAllExercisesAsync();
+
+        allExercises.AddRange(userExercises);
+        allExercises.AddRange(defaultExercises);
+
+        var availableExercises = allExercises
+            .Where(e => availableEquipment.Contains(e.RequiredEquipment))
+            .ToList();
+
+        var workoutType = GetWorkoutType(experience, trainingDays);
+        var (sets, reps, rest) = GetTrainingParameters(goal, experience, trainingDays);
+
+        var selectedExercises = workoutType switch
+        {
+            WorkoutType.FullBody => SelectExercisesForFullBody(availableExercises),
+            WorkoutType.UpperLower when upperLowerDay.HasValue =>
+                SelectExercisesForWorkout(availableExercises, upperLowerDay.Value, experience),
+            WorkoutType.PushPull when pushPullDay.HasValue =>
+                SelectExercisesForWorkout(availableExercises, pushPullDay.Value, experience),
+            _ => throw new ArgumentException("Invalid workout configuration")
+        };
+
+        var activities = CreateActivities(selectedExercises, sets, reps, rest);
+        var categories = await _categoryService.GetAllCategoriesAsync();
+        var planCategories = GetPlanCategories(categories, goal, workoutType);
+
+        var dayType = pushPullDay?.ToString() ?? upperLowerDay?.ToString() ?? "Full Body";
+
+        return new UserMadeTrainingPlan
+        {
+            UserId = userId,
+            Name = $"{dayType} {goal} Workout",
+            Description = GenerateDescription(goal, experience, workoutType),
+            Categories = planCategories,
+            Activities = activities
+        };
+    }
+
+    public void UpdatePlanWithWeights(
+        UserMadeTrainingPlan plan,
+        Dictionary<int, float> repMaxes,
+        TrainingGoal goal,
+        ExperienceLevel experience)
+    {
+        if (repMaxes.Count == 0)
+        {
+            return;
+        }
+
+        // Get 1RM percentage based on training parameters and research
+        var (minPercentage, maxPercentage) = (goal, experience) switch
         {
             // Strength focus
-            (TrainingGoal.Strength, ExperienceLevel.Untrained) => (3, 8, 120),  // 60-70% 1RM
-            (TrainingGoal.Strength, ExperienceLevel.Trained) => (4, 6, 180),    // 70-80% 1RM
-            (TrainingGoal.Strength, ExperienceLevel.Advanced) => (5, 5, 180),   // 80-90% 1RM
+            // Paper: 80-85%+ for advanced, progressive loading from 45-50% for untrained
+            (TrainingGoal.Strength, ExperienceLevel.Untrained) => (0.45f, 0.50f), // 45-50% 1RM initially
+            (TrainingGoal.Strength, ExperienceLevel.Trained) => (0.70f, 0.80f),   // 70-80% 1RM
+            (TrainingGoal.Strength, ExperienceLevel.Advanced) => (0.80f, 0.90f),  // 80-90% 1RM
 
             // Hypertrophy focus
-            (TrainingGoal.Hypertrophy, ExperienceLevel.Untrained) => (3, 12, 60),  // 60-70% 1RM
-            (TrainingGoal.Hypertrophy, ExperienceLevel.Trained) => (4, 10, 90),    // 70-80% 1RM
-            (TrainingGoal.Hypertrophy, ExperienceLevel.Advanced) => (4, 8, 90),    // 75-85% 1RM
+            // Paper: 6-12RM range optimal, moderate loads
+            (TrainingGoal.Hypertrophy, ExperienceLevel.Untrained) => (0.60f, 0.65f), // Lighter loads initially
+            (TrainingGoal.Hypertrophy, ExperienceLevel.Trained) => (0.65f, 0.75f),   // Moderate loads
+            (TrainingGoal.Hypertrophy, ExperienceLevel.Advanced) => (0.70f, 0.80f),  // Higher end of range
+
+            // Endurance focus 
+            // Paper: Light loads with high reps
+            (TrainingGoal.Endurance, ExperienceLevel.Untrained) => (0.45f, 0.50f), // Very light for beginners
+            (TrainingGoal.Endurance, ExperienceLevel.Trained) => (0.50f, 0.60f),   // Light loads
+            (TrainingGoal.Endurance, ExperienceLevel.Advanced) => (0.55f, 0.65f),  // Slightly higher with experience
+
+            _ => (0.60f, 0.70f) // Default moderate range
+        };
+
+        var random = new Random();
+
+        foreach (var activity in plan.Activities)
+        {
+            if (activity.Exercise?.RequiredEquipment == Equipment.None ||
+                !repMaxes.TryGetValue(activity.ExerciseId, out var repMax) ||
+                repMax <= 0 || activity.Exercise == null)
+            {
+                continue;
+            }
+
+            // Calculate the exercise complexity score
+            var complexityScore = GetExerciseComplexityScore(activity.Exercise);
+            
+            // Adjust percentage based on exercise complexity
+            // More complex exercises use slightly lower percentage of 1RM
+            var complexity = complexityScore switch
+            {
+                > 100 => -0.05f,  // Compound movements
+                > 50 => -0.025f,  // Intermediate complexity
+                _ => 0f          // Isolation movements
+            };
+
+            // Generate a random percentage within the appropriate range
+            var percentage = minPercentage + complexity + 
+                (float)(random.NextDouble() * (maxPercentage - minPercentage));
+
+            // Calculate initial recommended weight
+            var baseWeight = RoundToNearest2Point5(repMax * percentage);
+
+            // Progressive loading within sets if appropriate
+            var setCount = activity.Sets.Count;
+            for (var i = 0; i < setCount; i++)
+            {
+                var set = activity.Sets[i];
+                
+                if (goal == TrainingGoal.Strength && experience != ExperienceLevel.Untrained && setCount > 2)
+                {
+                    // Increase weight by 2.5kg or 5kg increments for each set after first
+                    var increment = i * 2.5f;
+                    set.Weight = RoundToNearest2Point5(baseWeight + increment);
+                }
+                else
+                {
+                    set.Weight = baseWeight;
+                }
+            }
+        }
+    }
+
+    private static float RoundToNearest2Point5(float weight)
+    {
+        // Round down to nearest 2.5kg
+        var roundedWeight = MathF.Floor(weight / 2.5f) * 2.5f;
+        
+        // Ensure minimum weight of 2.5kg
+        return Math.Max(2.5f, roundedWeight);
+    }
+
+    private static (int sets, int reps, int rest) GetTrainingParameters(
+        TrainingGoal goal, 
+        ExperienceLevel experience,
+        int trainingDays)
+    {
+        // First, get base parameters based on goal and experience
+        var (baseSets, baseReps, baseRest) = (goal, experience) switch
+        {
+            // Strength focus
+            (TrainingGoal.Strength, ExperienceLevel.Untrained) => (2, 8, 120),    // 45-50% 1RM initially
+            (TrainingGoal.Strength, ExperienceLevel.Trained) => (3, 6, 180),      // 70-80% 1RM
+            (TrainingGoal.Strength, ExperienceLevel.Advanced) => (4, 3, 300),     // 80-85%+ 1RM, 3-5 min rest
+
+            // Hypertrophy focus
+            (TrainingGoal.Hypertrophy, ExperienceLevel.Untrained) => (2, 10, 60),  // Lighter load initially
+            (TrainingGoal.Hypertrophy, ExperienceLevel.Trained) => (3, 8, 90),     // 6-12 RM range
+            (TrainingGoal.Hypertrophy, ExperienceLevel.Advanced) => (4, 6, 90),    // Higher intensity within range
 
             // Endurance focus
-            (TrainingGoal.Endurance, _) => (3, 15, 45),  // 50-65% 1RM
+            (TrainingGoal.Endurance, ExperienceLevel.Untrained) => (2, 15, 45),   // Higher reps, shorter rest
+            (TrainingGoal.Endurance, ExperienceLevel.Trained) => (3, 15, 30),     // Minimize rest as conditioning improves
+            (TrainingGoal.Endurance, ExperienceLevel.Advanced) => (3, 20, 30),    // Increase volume through reps
 
             _ => throw new ArgumentException("Invalid training parameters")
         };
+
+        // Adjust sets based on training frequency
+        // Paper suggests higher frequency allows for lower per-session volume while maintaining weekly volume
+        var adjustedSets = (trainingDays, experience) switch
+        {
+            // 1-2 days requires higher per-session volume to maintain adequate weekly volume
+            (1, _) => baseSets + 2,                    // Add 2 sets to compensate for low frequency
+            (2, _) => baseSets + 1,                    // Add 1 set to moderately compensate
+            
+            // 3 days is considered optimal for untrained/novice
+            (3, ExperienceLevel.Untrained) => baseSets, // Keep base sets
+            
+            // 4-5 days allows for reduced per-session volume
+            (4, _) => Math.Max(2, baseSets - 1),       // Reduce sets but maintain minimum of 2
+            (5, _) => Math.Max(2, baseSets - 1),       // Reduce sets but maintain minimum of 2
+            
+            // 6 days requires careful management of volume
+            (6, ExperienceLevel.Advanced) => Math.Max(2, baseSets - 2), // Further reduce sets for recovery
+            (6, _) => Math.Max(2, baseSets - 1),       // Reduce sets but maintain minimum of 2
+            
+            // Default to base sets for any other combination
+            _ => baseSets
+        };
+
+        // Adjust rest periods based on frequency
+        // Higher frequency allows slightly shorter rest periods as per-session volume is lower
+        var adjustedRest = (trainingDays, goal) switch
+        {
+            // Lower frequency needs full recovery between sets due to higher per-session volume
+            (1 or 2, TrainingGoal.Strength) => baseRest,
+            (1 or 2, _) => baseRest,
+            
+            // Moderate frequency can use standard rest periods
+            (3 or 4, TrainingGoal.Strength) => baseRest,
+            (3 or 4, _) => baseRest - 15, // Slightly reduce rest periods
+            
+            // Higher frequency can use shorter rest periods due to lower per-session volume
+            (>= 5, TrainingGoal.Strength) => baseRest - 30,
+            (>= 5, _) => baseRest - 30,
+            
+            _ => baseRest
+        };
+
+        // Reps remain constant as they're more related to the specific training goal
+        // than to frequency
+
+        return (adjustedSets, baseReps, adjustedRest);
+    }
 
     private static List<ExerciseBase> SelectExercisesForFullBody(List<ExerciseBase> availableExercises)
     {
@@ -345,103 +544,5 @@ public class PlanGeneratorService : IPlanGeneratorService
         });
 
         return categories.Distinct().ToList();
-    }
-
-    public async Task<UserMadeTrainingPlan> GenerateTrainingPlanAsync(
-        string userId,
-        TrainingGoal goal,
-        ExperienceLevel experience,
-        int trainingDays,
-        IEnumerable<Equipment> availableEquipment,
-        PushPullWorkoutDay? pushPullDay = null,
-        UpperLowerWorkoutDay? upperLowerDay = null)
-    {
-        var allExercises = new List<ExerciseBase>();
-        var userExercises = await _userExerciseService.GetUserExercisesAsync(userId);
-        var defaultExercises = await _defaultExerciseService.GetAllExercisesAsync();
-
-        allExercises.AddRange(userExercises);
-        allExercises.AddRange(defaultExercises);
-
-        var availableExercises = allExercises
-            .Where(e => availableEquipment.Contains(e.RequiredEquipment))
-            .ToList();
-
-        var workoutType = GetWorkoutType(experience, trainingDays);
-        var (sets, reps, rest) = GetTrainingParameters(goal, experience);
-
-        var selectedExercises = workoutType switch
-        {
-            WorkoutType.FullBody => SelectExercisesForFullBody(availableExercises),
-            WorkoutType.UpperLower when upperLowerDay.HasValue =>
-                SelectExercisesForWorkout(availableExercises, upperLowerDay.Value, experience),
-            WorkoutType.PushPull when pushPullDay.HasValue =>
-                SelectExercisesForWorkout(availableExercises, pushPullDay.Value, experience),
-            _ => throw new ArgumentException("Invalid workout configuration")
-        };
-
-        var activities = CreateActivities(selectedExercises, sets, reps, rest);
-        var categories = await _categoryService.GetAllCategoriesAsync();
-        var planCategories = GetPlanCategories(categories, goal, workoutType);
-
-        var dayType = pushPullDay?.ToString() ?? upperLowerDay?.ToString() ?? "Full Body";
-
-        return new UserMadeTrainingPlan
-        {
-            UserId = userId,
-            Name = $"{dayType} {goal} Workout",
-            Description = GenerateDescription(goal, experience, workoutType),
-            Categories = planCategories,
-            Activities = activities
-        };
-    }
-
-    public void UpdatePlanWithWeights(
-        UserMadeTrainingPlan plan,
-        Dictionary<int, float> repMaxes,
-        TrainingGoal goal,
-        ExperienceLevel experience)
-    {
-        if (repMaxes.Count == 0)
-        {
-            return;
-        }
-
-        // Get 1RM percentage based on training parameters
-        var percentage = (goal, experience) switch
-        {
-            // Strength focus - based on research
-            (TrainingGoal.Strength, ExperienceLevel.Untrained) => 0.65f, // 60-70% 1RM
-            (TrainingGoal.Strength, ExperienceLevel.Trained) => 0.75f,   // 70-80% 1RM
-            (TrainingGoal.Strength, ExperienceLevel.Advanced) => 0.85f,  // 80-90% 1RM
-
-            // Hypertrophy focus
-            (TrainingGoal.Hypertrophy, ExperienceLevel.Untrained) => 0.65f, // 60-70% 1RM
-            (TrainingGoal.Hypertrophy, ExperienceLevel.Trained) => 0.75f,   // 70-80% 1RM
-            (TrainingGoal.Hypertrophy, ExperienceLevel.Advanced) => 0.75f,  // 75-85% 1RM
-
-            // Endurance focus
-            (TrainingGoal.Endurance, _) => 0.55f, // 50-60% 1RM
-
-            _ => 0.65f // Default to beginner range if something goes wrong
-        };
-
-        foreach (var activity in plan.Activities)
-        {
-            if (activity.Exercise?.RequiredEquipment != Equipment.None &&
-                repMaxes.TryGetValue(activity.ExerciseId, out var repMax) &&
-                repMax > 0)
-            {
-                var recommendedWeight = repMax * percentage;
-
-                // Round to nearest 2.5kg for practical purposes
-                recommendedWeight = MathF.Round(recommendedWeight / 2.5f) * 2.5f;
-
-                foreach (var set in activity.Sets)
-                {
-                    set.Weight = recommendedWeight;
-                }
-            }
-        }
     }
 }

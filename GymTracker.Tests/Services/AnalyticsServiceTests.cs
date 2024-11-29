@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using BlazorBootstrap;
 using System;
 using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
 
 namespace GymTracker.Tests.Services;
 

@@ -131,7 +131,7 @@ public class PlanGeneratorService : IPlanGeneratorService
 
             // Calculate the exercise complexity score
             var complexityScore = GetExerciseComplexityScore(activity.Exercise);
-            
+
             // Adjust percentage based on exercise complexity
             // More complex exercises use slightly lower percentage of 1RM
             var complexity = complexityScore switch
@@ -142,7 +142,7 @@ public class PlanGeneratorService : IPlanGeneratorService
             };
 
             // Generate a random percentage within the appropriate range
-            var percentage = minPercentage + complexity + 
+            var percentage = minPercentage + complexity +
                 (float)(random.NextDouble() * (maxPercentage - minPercentage));
 
             // Calculate initial recommended weight
@@ -153,7 +153,7 @@ public class PlanGeneratorService : IPlanGeneratorService
             for (var i = 0; i < setCount; i++)
             {
                 var set = activity.Sets[i];
-                
+
                 if (goal == TrainingGoal.Strength && experience != ExperienceLevel.Untrained && setCount > 2)
                 {
                     // Increase weight by 2.5kg or 5kg increments for each set after first
@@ -168,17 +168,17 @@ public class PlanGeneratorService : IPlanGeneratorService
         }
     }
 
-    private static float RoundToNearest2Point5(float weight)
+    protected static float RoundToNearest2Point5(float weight)
     {
         // Round down to nearest 2.5kg
         var roundedWeight = MathF.Floor(weight / 2.5f) * 2.5f;
-        
+
         // Ensure minimum weight of 2.5kg
         return Math.Max(2.5f, roundedWeight);
     }
 
-    private static (int sets, int reps, int rest) GetTrainingParameters(
-        TrainingGoal goal, 
+    protected static (int sets, int reps, int rest) GetTrainingParameters(
+        TrainingGoal goal,
         ExperienceLevel experience,
         int trainingDays)
     {
@@ -210,18 +210,18 @@ public class PlanGeneratorService : IPlanGeneratorService
             // 1-2 days requires higher per-session volume to maintain adequate weekly volume
             (1, _) => baseSets + 2,                    // Add 2 sets to compensate for low frequency
             (2, _) => baseSets + 1,                    // Add 1 set to moderately compensate
-            
+
             // 3 days is considered optimal for untrained/novice
             (3, ExperienceLevel.Untrained) => baseSets, // Keep base sets
-            
+
             // 4-5 days allows for reduced per-session volume
             (4, _) => Math.Max(2, baseSets - 1),       // Reduce sets but maintain minimum of 2
             (5, _) => Math.Max(2, baseSets - 1),       // Reduce sets but maintain minimum of 2
-            
+
             // 6 days requires careful management of volume
             (6, ExperienceLevel.Advanced) => Math.Max(2, baseSets - 2), // Further reduce sets for recovery
             (6, _) => Math.Max(2, baseSets - 1),       // Reduce sets but maintain minimum of 2
-            
+
             // Default to base sets for any other combination
             _ => baseSets
         };
@@ -233,15 +233,15 @@ public class PlanGeneratorService : IPlanGeneratorService
             // Lower frequency needs full recovery between sets due to higher per-session volume
             (1 or 2, TrainingGoal.Strength) => baseRest,
             (1 or 2, _) => baseRest,
-            
+
             // Moderate frequency can use standard rest periods
             (3 or 4, TrainingGoal.Strength) => baseRest,
             (3 or 4, _) => baseRest - 15, // Slightly reduce rest periods
-            
+
             // Higher frequency can use shorter rest periods due to lower per-session volume
-            (>= 5, TrainingGoal.Strength) => baseRest - 30,
-            (>= 5, _) => baseRest - 30,
-            
+            ( >= 5, TrainingGoal.Strength) => baseRest - 30,
+            ( >= 5, _) => baseRest - 30,
+
             _ => baseRest
         };
 
@@ -251,7 +251,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         return (adjustedSets, baseReps, adjustedRest);
     }
 
-    private static List<ExerciseBase> SelectExercisesForFullBody(List<ExerciseBase> availableExercises)
+    protected static List<ExerciseBase> SelectExercisesForFullBody(List<ExerciseBase> availableExercises)
     {
         // Prioritize compound movements based on research
         var exercises = new List<ExerciseBase>();
@@ -270,7 +270,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         return exercises;
     }
 
-    private static List<PlanActivity> CreateActivities(
+    protected static List<PlanActivity> CreateActivities(
         List<ExerciseBase> exercises,
         int setsPerExercise,
         int repsPerSet,
@@ -315,7 +315,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         return activities;
     }
 
-    private static string GenerateDescription(TrainingGoal goal, ExperienceLevel experience, WorkoutType workoutType)
+    protected static string GenerateDescription(TrainingGoal goal, ExperienceLevel experience, WorkoutType workoutType)
     {
         var focusDescription = goal switch
         {
@@ -345,7 +345,7 @@ public class PlanGeneratorService : IPlanGeneratorService
                $"Based on scientific research for optimal training adaptations.";
     }
 
-    private static int GetExerciseComplexityScore(ExerciseBase exercise)
+    protected static int GetExerciseComplexityScore(ExerciseBase exercise)
     {
         var score = 0;
 
@@ -362,7 +362,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         return score;
     }
 
-    private static List<ExerciseBase> SelectExercisesForWorkout(
+    protected static List<ExerciseBase> SelectExercisesForWorkout(
         IEnumerable<ExerciseBase> availableExercises,
         PushPullWorkoutDay day,
         ExperienceLevel experience)
@@ -417,7 +417,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         return exercises;
     }
 
-    private static List<ExerciseBase> SelectExercisesForWorkout(
+    protected static List<ExerciseBase> SelectExercisesForWorkout(
         IEnumerable<ExerciseBase> availableExercises,
         UpperLowerWorkoutDay day,
         ExperienceLevel experience)
@@ -469,7 +469,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         return exercises;
     }
 
-    private static List<ExerciseBase> GetPrimaryCompoundExercises(
+    protected static List<ExerciseBase> GetPrimaryCompoundExercises(
         List<ExerciseBase> exercises,
         string primaryCategory,
         int count)
@@ -483,7 +483,7 @@ public class PlanGeneratorService : IPlanGeneratorService
             .ToList();
     }
 
-    private static List<ExerciseBase> GetIsolationExercises(
+    protected static List<ExerciseBase> GetIsolationExercises(
         List<ExerciseBase> exercises,
         string targetCategory,
         int count)
@@ -499,7 +499,7 @@ public class PlanGeneratorService : IPlanGeneratorService
             .ToList();
     }
 
-    private static List<ExerciseBase> GetExercisesByCategory(
+    protected static List<ExerciseBase> GetExercisesByCategory(
         List<ExerciseBase> exercises,
         string category,
         int count)
@@ -518,7 +518,7 @@ public class PlanGeneratorService : IPlanGeneratorService
         return matching;
     }
 
-    private static List<TrainingPlanCategory> GetPlanCategories(
+    protected static List<TrainingPlanCategory> GetPlanCategories(
         IEnumerable<TrainingPlanCategory> allCategories,
         TrainingGoal goal,
         WorkoutType workoutType)

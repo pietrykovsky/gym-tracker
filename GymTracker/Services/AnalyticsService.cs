@@ -47,7 +47,7 @@ public class AnalyticsService : IAnalyticsService
                 Date = a.TrainingSession.Date,
                 MaxWeight = a.Sets.Max(s => s.Weight ?? 0),
                 AvgWeight = a.Sets.Average(s => s.Weight ?? 0),
-                EstimatedOneRm = a.Sets.Max(s => (s.Weight ?? 0) * (1 + (s.Repetitions * 0.0333))) // Brzycki formula
+                EstimatedOneRm = a.Sets.Max(s => (s.Weight ?? 0) * (1 + (s.Repetitions * 0.0333))) // Baechle formula
             })
             .ToListAsync();
 

@@ -1,4 +1,9 @@
-# 💪 Gym Tracker
+# 💪 GymTracker
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-0.7.0-green.svg)](https://github.com/pietrykovsky/gym-tracker)
+[![.NET](https://img.shields.io/badge/.NET-8.0-512BD4?logo=dotnet)](https://dotnet.microsoft.com/)
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?logo=docker&logoColor=white)](https://www.docker.com/)
 
 GymTracker is a comprehensive web application designed for fitness enthusiasts to track their workouts, monitor body measurements, and analyze training progress. Built with Blazor Server and modern .NET technologies, it offers a robust platform for managing your fitness journey.
 
@@ -33,27 +38,52 @@ GymTracker is a comprehensive web application designed for fitness enthusiasts t
   - Weight and rest period management
   - Notes and comments
 
-## 🛠️ Tech Stack
+## 🛠️ Built With
 
-- **Backend**
+<table>
+  <tr>
+    <td align="center" width="96">
+        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/dotnetcore/dotnetcore-original.svg" width="48" height="48" alt=".NET" />
+        <br>.NET 8.0
+    </td>
+    <td align="center" width="96">
+        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" width="48" height="48" alt="PostgreSQL" />
+        <br>PostgreSQL
+    </td>
+    <td align="center" width="96">
+        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" width="48" height="48" alt="Docker" />
+        <br>Docker
+    </td>
+    <td align="center" width="96">
+        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bootstrap/bootstrap-original.svg" width="48" height="48" alt="Bootstrap" />
+        <br>Bootstrap 5
+    </td>
+    <td align="center" width="96">
+        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg" width="48" height="48" alt="NGINX" />
+        <br>NGINX
+    </td>
+  </tr>
+</table>
 
-  - .NET 8.0
-  - ASP.NET Core
-  - Entity Framework Core
-  - PostgreSQL
+### Backend
 
-- **Frontend**
+- ASP.NET Core
+- Entity Framework Core
+- PostgreSQL
 
-  - Blazor Server
-  - Bootstrap 5
-  - Bootswatch Mint Theme
-  - BlazorBootstrap
+### Frontend
 
-- **Infrastructure**
-  - Docker
-  - NGINX
-  - GitHub Actions
-  - Let's Encrypt
+- Blazor Server
+- Bootstrap 5
+- Bootswatch Mint Theme
+- BlazorBootstrap
+
+### Infrastructure
+
+- Docker
+- NGINX
+- GitHub Actions
+- Let's Encrypt
 
 ## 🚀 Getting Started
 
